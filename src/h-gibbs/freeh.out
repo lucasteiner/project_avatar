@@ -1,0 +1,249 @@
+
+ freeh (login.curta.zedat.fu-berlin.de) : TURBOMOLE rev. V7-6-1 30 Apr 2022 at 11:12:13 compiled Apr 30th 2022
+ Copyright (C) 2022 TURBOMOLE GmbH, Karlsruhe
+
+
+    2024-09-23 18:38:41.507 
+
+
+
+                      f r e e   e n t h a l p y - program
+                            quantum chemistry group
+                            universitaet  karlsruhe
+                                     germany
+
+
+  -*--*--*--*--*--*--*--*--*--*--*--*--*--*--*--*--*--*
+ 
+   This program calculates partition sums and chemical
+   potentials for linear and non-linear molecules in
+   harmonic and ideal gas approximations.
+ 
+   Essential inputs from the control file comprise :
+   $vibrational spectrum
+   $coord
+   $atoms
+   $symmetry
+ 
+  -*--*--*--*--*--*--*--*--*--*--*--*--*--*--*--*--*--*
+ 
+
+
+              +--------------------------------------------------+
+              | Atomic coordinate, charge and isotop information |
+              +--------------------------------------------------+
+
+                    atomic coordinates            atom    charge  isotop
+          0.00000000    0.00000000    0.00000000    h      1.000     0
+ 
+       center of nuclear mass  :    0.00000000    0.00000000    0.00000000
+       center of nuclear charge:    0.00000000    0.00000000    0.00000000
+
+ symmetry group of the molecule :   c1 
+
+ the group has the following generators :
+   c1(z)
+
+    1 symmetry operations found
+
+ there are 1 real representations :   a   
+
+ maximum number of shells which are related by symmetry :  1
+
+  missing beta occupation number declaration 
+ spin quantum number determined from <S*S>:  0.5 ...deviation from sqrt(1/4+<S*S>)-1/2:   0.000
+
+ Multiplicity of the electronic wavefunction:        2
+ Spatial degeneracy of the electronic wavefunction:  1
+ Total degeneracy of the electronic wavefunction:    2
+
+ -----------------------------------------
+ Judged from the schoenflies symbol c1  ,
+ the number of rotations in the nuclear   
+ exchange group is SIGMA=   1. SIGMA is 
+ the symmetry number entering the quasi-  
+ classical rotational partition sum.      
+ Hit RETURN to accept or enter a different
+ integer value.                           
+ -----------------------------------------
+
+ 
+
+ center of mass :     0.00000000000000    0.00000000000000    0.00000000000000
+    1 h     0.00000000000000    0.00000000000000    0.00000000000000
+ 
+         0.00000
+         0.00000    0.00000
+         0.00000    0.00000    0.00000
+ 
+          ----------------------------------------
+          eigenvalues & -vectors of inertia tensor
+          ----------------------------------------
+ 
+         0.00000    0.00000    0.00000
+
+ 
+         0.00000    0.00000    0.00000
+         0.00000    0.00000    0.00000
+         0.00000    0.00000    0.00000
+
+
+ wavenumbers calculated by scf theory tend to be
+ 1-10% too large and may be corrected by scaling
+ -----------------------------------------------
+ default value of scaling factor (BP/SVP):   0.9914
+ enter new value for corr, if you want to change
+ -----------------------------------------------
+
+
+ enter the range of temperatures (K) and pressures (MPa)
+ at which you want to calculate partition sums and free enthalpies :
+
+ tstart=<real> tend=<real> numt=<integer> pstart=<real> pend=<real> nump=<integer>
+
+ default values are  :
+ tstart=298.15 tend=298.15 numt=1 pstart=0.1 pend=0.1 nump=1
+
+ or enter  q  or  *  to quit
+
+
+ 
+          ------------------
+           your wishes are :
+          ------------------
+
+  pstart=  0.1000      pend=  0.1000      nump=   1
+
+  tstart=   298.1      tend=   298.1      numt=   1
+ 
+           zero point vibrational energy
+           -----------------------------
+           zpe=   0.000     kJ/mol
+      ----------------------------------------------
+          Rigid Rotor Harmonic Oscillator (RRHO):   
+      ----------------------------------------------
+ 
+   T        p       ln(qtrans) ln(qrot) ln(qvib) chem.pot.   energy    entropy
+  (K)      (MPa)                                 (kJ/mol)   (kJ/mol) (kJ/mol/K)
+ 
+ 298.15   0.1000000      10.62     0.00     0.00    -26.31      3.72   0.10904
+ 
+   T        P              Cv            Cp       enthalpy
+  (K)     (MPa)        (kJ/mol-K)    (kJ/mol-K)   (kJ/mol)
+ 298.15   0.1000000     0.0124714     0.0207857      6.20
+ 
+ ******************************************************
+ | qtrans=(m*k*T/(2*pi))^1.5*v h/(2*pi)=1a.u.(omitted)|
+ |   m=mol. mass in a.u. v=vol. per mol. of ideal gas |
+ | qvib=product(i) 1/(1-exp(-e(i)/kT)                 |
+ |   e(i)=frequency of i-th vibrational mode          |
+ | qrot=((2*pi*kT)^3*A*B*C)^0.5/(sigma*pi)            |
+ |   A,B,C=moments of inertia in a.u.                 |
+ | qrot=2*pi*kT*A/(sigma*pi) for lin. mol.            |
+ | chem.pot.=ZPE-RT*ln(qtrans*qrot*qvib)              |
+ |   ZPE=zero point vibrational energy                |
+ | energy=ZPE+3RT                                     |
+ |  +sum(i) e(i)*(1+exp(-e(i)/kT))/2*(1-exp(-e(i)/kT) |
+ |       =3/2RT for atoms etc.                        |
+ | enthalpy=energy+RT                                 |
+ | entropy=(energy+RT-chem.pot.)/T                    |
+ | const.vol.Heat Capacity : Cv=d(energy)/dT          |
+ | const.press.Heat Capacity : Cp=d(enthalpy)/dT      |
+ | These formulas are applicable only if              |
+ | * rotation can be treated classically              |
+ | * the molecule forms an ideal gas/solution         |
+ | * the harmonic approximation to vibrational        |
+ |   modes is not grossly misleading                  |
+ | Electronic (SCF or MP2) energies still have        |
+ | to be added to obtain "absolute potentials"        |
+ | for chemical equilibrium constants.                |
+ ******************************************************
+ 
+
+ enter the range of temperatures (K) and pressures (MPa)
+ at which you want to calculate partition sums and free enthalpies :
+
+ tstart=<real> tend=<real> numt=<integer> pstart=<real> pend=<real> nump=<integer>
+
+ default values are  :
+ tstart=298.15 tend=298.15 numt=1 pstart=0.1 pend=0.1 nump=1
+
+ or enter  q  or  *  to quit
+
+
+ 
+          ------------------
+           your wishes are :
+          ------------------
+
+  pstart=  0.1000      pend=  0.1000      nump=   1
+
+  tstart=   298.1      tend=   298.1      numt=   1
+ 
+           zero point vibrational energy
+           -----------------------------
+           zpe=   0.000     kJ/mol
+      ----------------------------------------------
+          Rigid Rotor Harmonic Oscillator (RRHO):   
+      ----------------------------------------------
+ 
+   T        p       ln(qtrans) ln(qrot) ln(qvib) chem.pot.   energy    entropy
+  (K)      (MPa)                                 (kJ/mol)   (kJ/mol) (kJ/mol/K)
+ 
+ 298.15   0.1000000      10.62     0.00     0.00    -26.31      3.72   0.10904
+ 
+   T        P              Cv            Cp       enthalpy
+  (K)     (MPa)        (kJ/mol-K)    (kJ/mol-K)   (kJ/mol)
+ 298.15   0.1000000     0.0124714     0.0207857      6.20
+ 
+ ******************************************************
+ | qtrans=(m*k*T/(2*pi))^1.5*v h/(2*pi)=1a.u.(omitted)|
+ |   m=mol. mass in a.u. v=vol. per mol. of ideal gas |
+ | qvib=product(i) 1/(1-exp(-e(i)/kT)                 |
+ |   e(i)=frequency of i-th vibrational mode          |
+ | qrot=((2*pi*kT)^3*A*B*C)^0.5/(sigma*pi)            |
+ |   A,B,C=moments of inertia in a.u.                 |
+ | qrot=2*pi*kT*A/(sigma*pi) for lin. mol.            |
+ | chem.pot.=ZPE-RT*ln(qtrans*qrot*qvib)              |
+ |   ZPE=zero point vibrational energy                |
+ | energy=ZPE+3RT                                     |
+ |  +sum(i) e(i)*(1+exp(-e(i)/kT))/2*(1-exp(-e(i)/kT) |
+ |       =3/2RT for atoms etc.                        |
+ | enthalpy=energy+RT                                 |
+ | entropy=(energy+RT-chem.pot.)/T                    |
+ | const.vol.Heat Capacity : Cv=d(energy)/dT          |
+ | const.press.Heat Capacity : Cp=d(enthalpy)/dT      |
+ | These formulas are applicable only if              |
+ | * rotation can be treated classically              |
+ | * the molecule forms an ideal gas/solution         |
+ | * the harmonic approximation to vibrational        |
+ |   modes is not grossly misleading                  |
+ | Electronic (SCF or MP2) energies still have        |
+ | to be added to obtain "absolute potentials"        |
+ | for chemical equilibrium constants.                |
+ ******************************************************
+ 
+
+ enter the range of temperatures (K) and pressures (MPa)
+ at which you want to calculate partition sums and free enthalpies :
+
+ tstart=<real> tend=<real> numt=<integer> pstart=<real> pend=<real> nump=<integer>
+
+ default values are  :
+ tstart=298.15 tend=298.15 numt=1 pstart=0.1 pend=0.1 nump=1
+
+ or enter  q  or  *  to quit
+
+
+
+
+    ------------------------------------------------------------------------
+         total  cpu-time :   0.02 seconds
+         total wall-time :   4.79 seconds
+    ------------------------------------------------------------------------
+
+   ****  freeh : all done  ****
+
+
+    2024-09-23 18:38:46.278 
+

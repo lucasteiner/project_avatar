@@ -1,0 +1,76 @@
+$title
+$symmetry c1
+$user-defined bonds    file=coord
+$coord    file=coord
+$optimize
+ internal   off
+ redundant  off
+ cartesian  off
+ global     off
+ basis      off
+$atoms
+h  1                                                                           \
+   basis =h def2-TZVP                                                          \
+   jbas  =h def2-TZVP
+$basis    file=basis
+$uhfmo_alpha   file=alpha
+$uhfmo_beta   file=beta
+$uhf
+$alpha shells
+ a       1                                      ( 1 )
+$scfiterlimit       30
+$thize     0.10000000E-04
+$thime        5
+$scfdamp   start=1.000  step=0.050  min=0.100
+$scfdump
+$scfintunit
+ unit=30       size=0        file=twoint
+$scfdiis
+$maxcor    500 MiB  per_core
+$drvopt
+   cartesian  off
+   basis      off
+   global     off
+   hessian    on
+   dipole     on
+   nuclear polarizability
+$interconversion  off
+   qconv=1.d-7
+   maxiter=25
+$coordinateupdate
+   dqmax=0.3
+   interpolate  on
+   statistics    5
+$forceupdate
+   ahlrichs numgeo=0  mingeo=3 maxgeo=4 modus=<g|dq> dynamic fail=0.3
+   threig=0.005  reseig=0.005  thrbig=3.0  scale=1.00  damping=0.0
+$forceinit on
+   diag=default
+$energy    file=energy
+$grad    file=gradient
+$forceapprox    file=forceapprox
+$ricore      600
+$rij
+$jbas    file=auxbasis
+$dft
+   functional b-p
+   gridsize   m4
+$scfconv   7
+$scforbitalshift  closedshell=.05
+$rundimensions
+   natoms=1
+   nbf(CAO)=6
+   nbf(AO)=6
+$last step     freeh
+$orbital_max_rnorm 0.39179601470509E-03
+$last SCF energy change = -.49983842
+$subenergy  Etot         E1                  Ej                Ex                 Ec                 En
+-.4998384152096    -.4994542965396    0.3074245352836    -.3054706310880    -.2338022865603E-02 0.000000000000
+$ssquare from ridft
+          0.750 (not to be modified here)
+$charge from ridft
+          0.000 (not to be modified here)
+$dipole from ridft
+  x     0.00000000000006    y    -0.00000000000000    z    -0.00000000000009    a.u.
+   | dipole | =    0.0000000000  debye
+$end
