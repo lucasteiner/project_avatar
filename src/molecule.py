@@ -3,6 +3,7 @@ import numpy as np
 from molmass import Formula, ELEMENTS
 from collections import Counter
 from mechanics import Mechanics
+import math
 
 class Atom:
     def __init__(self, symbol, x, y, z):
@@ -21,72 +22,7 @@ class Molecule:
         self.atoms = []
 
         # Read only
-        self._dimension = None
-
-    # Property for vibrational_frequencies
-    @property
-    def vibrational_frequencies(self):
-        return self._vibrational_frequencies
-
-    @vibrational_frequencies.setter
-    def vibrational_frequencies(self, frequencies):
-        if not isinstance(frequencies, list):
-            raise ValueError("Vibrational frequencies must be provided as a list.")
-        if not all(isinstance(f, (int, float)) for f in frequencies):
-            raise ValueError("All vibrational frequencies must be numeric values.")
-        self._vibrational_frequencies = frequencies
-
-    def calculate_mechanics(self, vibrational_frequencies, 
-            temperature=298.15, pressure=1.0, volume=None):
-        if volume is None:
-            volume=self.volume
-
-        self.mechanics = Mechanics(self, self.dimension, vibrational_frequencies, 
-                temperature=298.15, pressure=1.0, volume=volume)
-
-    @property
-    def dimension(self):
-        self._update_dimension()
-        return self._dimension
-
-    def _update_dimension(self, linearity_threshold=1e-5):
-        """
-        Update the dimension of the molecule based on the number and arrangement of atoms.
-        Adds a threshold to determine if the molecule is linear or 3D.
-
-        Parameters:
-        linearity_threshold (float): Tolerance for determining linearity of the molecule.
-                                     Default is 1e-5.
-        """
-        num_atoms = len(self.atoms)
-
-        if num_atoms == 0:
-            self._dimension = None
-        elif num_atoms == 1:
-            self._dimension = 1
-        elif num_atoms == 2:
-            self._dimension = 2
-        else:
-            # For 3 or more atoms, check if they are linear (dimension 2) or 3D (dimension 3)
-            atom_positions = np.array([atom.position for atom in self.atoms])
-            vectors = atom_positions[1:] - atom_positions[0]  # Vectors from first atom to others
-
-            # Determine linearity by checking if the vectors are collinear within the threshold
-            if np.linalg.matrix_rank(vectors) == 1:
-                # Compute the magnitude of the cross product between pairs of vectors
-                linear = True
-                for i in range(1, len(vectors)):
-                    cross_product = np.cross(vectors[0], vectors[i])
-                    if np.linalg.norm(cross_product) > linearity_threshold:
-                        linear = False
-                        break
-
-                if linear:
-                    self._dimension = 2  # Linear molecule
-                else:
-                    self._dimension = 3  # 3D molecule
-            else:
-                self._dimension = 3  # Molecule is 3D
+        #self._dimension = None
 
     def add_atom(self, atom):
         """
@@ -154,6 +90,125 @@ class Molecule:
 
 
 
+    # Property for vibrational_frequencies
+    @property
+    def vibrational_frequencies(self):
+        return self._vibrational_frequencies
+
+    @vibrational_frequencies.setter
+    def vibrational_frequencies(self, frequencies):
+        if not isinstance(frequencies, list):
+            raise ValueError("Vibrational frequencies must be provided as a list.")
+        if not all(isinstance(f, (int, float)) for f in frequencies):
+            raise ValueError("All vibrational frequencies must be numeric values.")
+        self._vibrational_frequencies = frequencies
+
+    def calculate_mechanics(self, vibrational_frequencies=None, 
+            temperature=298.15, pressure=1.0, volume=None, qRRHO=100, pos_freqs=80):
+        """
+        Calculate statistical mechanics for the molecule
+
+        qRRHO (float): threshold in wavenumbers for treating low frequencies as free rotors
+        pos_freqs (float): threshold in wavenumbers for treating low imaginary frequencies as positive frequencies 
+        (Do not go below lowest frequency of transition states)
+        """
+        if volume is None:
+            volume=self.volume
+
+        if vibrational_frequencies is None:
+            vibrational_frequencies=self.vibrational_frequencies
+        else:
+            self.vibrational_frequencies=vibrational_frequencies
+        if self.vibrational_frequencies is None:
+            raise ValueError(f"Expected vibrational frequencies in function calculate_mechanics, \n {print(self)}.")
+        
+        linear = self.is_linear(vibrational_frequencies)
+
+        self.mechanics = Mechanics(self, linear, vibrational_frequencies, 
+                temperature=298.15, pressure=1.0, volume=volume)
+
+    @staticmethod
+    def is_linear(frequencies):
+        """
+        Determine if a molecule is linear based on its vibrational frequencies.
+    
+        Parameters:
+        frequencies (list of float): Vibrational frequencies.
+    
+        Returns:
+        bool: True if the molecule is linear (5 zero frequencies),
+              False if non-linear (6 zero frequencies).
+    
+        Raises:
+        ValueError: If the number of zero frequencies is not 5 or 6.
+        """
+        num_zero_freqs = sum(math.isclose(freq, 0.0) for freq in frequencies)
+        if num_zero_freqs == 5:
+            return True  # Linear molecule
+        elif num_zero_freqs == 6:
+            return False  # Non-linear molecule
+        else:
+            raise ValueError(f"Unexpected number of zero frequencies ({num_zero_freqs}).")
+
+    @property
+    def dimension(self):
+        return self._dimension
+
+    def _update_dimension(self, linearity_threshold=1e-5):
+        """
+        Update the dimension of the molecule based on the number and arrangement of atoms.
+        Determines if the molecule is linear or 3D.
+    
+        Parameters:
+        linearity_threshold (float): Tolerance for determining linearity of the molecule.
+                                     Default is 1e-5.
+        """
+        num_atoms = len(self.atoms)
+    
+        if num_atoms == 0:
+            self._dimension = None
+        elif num_atoms == 1:
+            self._dimension = 1
+        elif num_atoms == 2:
+            self._dimension = 2
+        else:
+            # For 3 or more atoms, check if they are linear (dimension 2) or 3D (dimension 3)
+            atom_positions = np.array([atom.position for atom in self.atoms])
+    
+            # Define the line using the first two atoms
+            point_on_line = atom_positions[0]
+            direction_vector = atom_positions[1] - atom_positions[0]
+            norm_direction = np.linalg.norm(direction_vector)
+    
+            if norm_direction == 0:
+                # First two atoms are at the same position; cannot define a line
+                self._dimension = 3  # Considered 3D due to undefined direction
+                return
+    
+            # Normalize the direction vector
+            direction_unit = direction_vector / norm_direction
+    
+            # Check if all other atoms lie on the line within the threshold
+            linear = True
+            for i in range(2, num_atoms):
+                vec = atom_positions[i] - point_on_line
+                vec_norm = np.linalg.norm(vec)
+                if vec_norm == 0:
+                    # Atom coincides with the point on the line
+                    continue  # No deviation, move to the next atom
+                # Compute the sine of the angle between vec and direction_unit
+                cross_prod = np.cross(direction_unit, vec)
+                sin_theta = np.linalg.norm(cross_prod) / vec_norm
+                if sin_theta > linearity_threshold:
+                    linear = False
+                    break
+    
+            if linear:
+                self._dimension = 2  # Linear molecule
+            else:
+                self._dimension = 3  # 3D molecule
+            
+
     def __repr__(self):
         return (f"Molecule({self.name}, Electronic Energy: {self._electronic_energy}, "
                 f"Gibbs Free Energy: {self._gibbs_free_energy}, "
@@ -188,41 +243,41 @@ class Molecule:
 
         return None
 
-    @classmethod
-    def from_ensemble_file(cls, filename):
-        """
-        Class method to parse an XYZ file with multiple molecular structures and energies.
-
-        Parameters:
-        filename (str): Path to the XYZ file.
-
-        Returns:
-        list: A list of Molecule objects with their respective atoms and energy.
-        """
-        with open(filename, 'r') as file:
-            lines = file.readlines()
-
-        molecules = []
-        i = 0
-        while i < len(lines):
-            natoms = int(lines[i].strip())  # Number of atoms
-            comment_line = lines[i + 1].strip()
-            energy = cls.extract_energy(comment_line)  # Extract energy from the comment line
-
-            molecule = cls(name=f"Molecule_{len(molecules)}", energy=energy)
-
-            # Parse atoms and their coordinates
-            for j in range(natoms):
-                parts = lines[i + 2 + j].split()
-                symbol = parts[0]
-                coords = np.array([float(parts[1]), float(parts[2]), float(parts[3])])
-                atom = Atom(symbol, *coords)
-                molecule.add_atom(atom)
-
-            molecules.append(molecule)
-            i += 2 + natoms  # Move to the next molecule block
-
-        return molecules
+#    @classmethod
+#    def from_ensemble_file(cls, filename):
+#        """
+#        Class method to parse an XYZ file with multiple molecular structures and energies.
+#
+#        Parameters:
+#        filename (str): Path to the XYZ file.
+#
+#        Returns:
+#        list: A list of Molecule objects with their respective atoms and energy.
+#        """
+#        with open(filename, 'r') as file:
+#            lines = file.readlines()
+#
+#        molecules = []
+#        i = 0
+#        while i < len(lines):
+#            natoms = int(lines[i].strip())  # Number of atoms
+#            comment_line = lines[i + 1].strip()
+#            energy = cls.extract_energy(comment_line)  # Extract energy from the comment line
+#
+#            molecule = cls(name=f"Molecule_{len(molecules)}", energy=energy)
+#
+#            # Parse atoms and their coordinates
+#            for j in range(natoms):
+#                parts = lines[i + 2 + j].split()
+#                symbol = parts[0]
+#                coords = np.array([float(parts[1]), float(parts[2]), float(parts[3])])
+#                atom = Atom(symbol, *coords)
+#                molecule.add_atom(atom)
+#
+#            molecules.append(molecule)
+#            i += 2 + natoms  # Move to the next molecule block
+#
+#        return molecules
 
     @classmethod
     def from_xyz_file(cls, filename, molecule_name="Unnamed Molecule"):
@@ -272,25 +327,25 @@ class Molecule:
     
         return molecule
 
-
-    @classmethod
-    def from_dataframe(cls, df, element_column_str='Elements', xyz_column_str='xyz Coordinates'):
-        """
-        Create a list of Molecule objects from a DataFrame.
-    
-        :param df: DataFrame with 'Elements' and 'xyz Coordinates' columns.
-        :return: List of Molecule objects.
-        """
-        molecules = []
-    
-        for index, row in df.iterrows():
-            elements = [elem.upper() for elem in row[element_column_str]]
-            coordinates = row[xyz_column_str]
-            molecule_name = f"{index}"  # You can customize the naming
-            molecule = cls.from_lists(elements, coordinates, molecule_name=molecule_name)
-            molecules.append(molecule)
-    
-        return molecules
+#
+#    @classmethod
+#    def from_dataframe(cls, df, element_column_str='Elements', xyz_column_str='xyz Coordinates'):
+#        """
+#        Create a list of Molecule objects from a DataFrame.
+#    
+#        :param df: DataFrame with 'Elements' and 'xyz Coordinates' columns.
+#        :return: List of Molecule objects.
+#        """
+#        molecules = []
+#    
+#        for index, row in df.iterrows():
+#            elements = [elem.upper() for elem in row[element_column_str]]
+#            coordinates = row[xyz_column_str]
+#            molecule_name = f"{index}"  # You can customize the naming
+#            molecule = cls.from_lists(elements, coordinates, molecule_name=molecule_name)
+#            molecules.append(molecule)
+#    
+#        return molecules
 
 
 

@@ -2,7 +2,7 @@
 import numpy as np
 
 class Mechanics:
-    def __init__(self, temperature=298.15, pressure=1.0, volume=None
+    def __init__(self, temperature=298.15, pressure=1.0, volume=None,
                  vibrational_frequencies=None):
         """
         Initialize the Mechanics class with basic thermodynamic properties.
@@ -94,17 +94,5 @@ class Mechanics:
                 raise ValueError("Helmholtz free energy must be a numeric value.")
             self._helmholz_free_energy = energy
      
-        # Placeholder for calculating the partition function
-        def calculate_partition_function(self, molecule):
-            """
-            Calculate the partition function of the system for a given molecule.
-            
-            Parameters:
-            molecule (Molecule): The molecule for which the partition function is calculated.
-            
-            Returns:
-            float: The calculated partition function.
-            """
-            pass
      
      

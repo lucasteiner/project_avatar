@@ -1,4 +1,4 @@
-from scipy.constants import Planck, Boltzmann, Avogadro, gas_constant, pi
+from scipy.constants import Planck, Boltzmann, Avogadro, gas_constant, pi, c
 import numpy as np
 
 class Molecule3DMechanics:
@@ -9,7 +9,7 @@ class Molecule3DMechanics:
         Parameters:
         mass (float): Mass of the molecule in kg.
         rotational_constants (list of float): Rotational constants (A, B, C) in m^-1.
-        vibrational_frequencies (list of float): Vibrational frequencies in Hz.
+        vibrational_frequencies (list of float): Vibrational frequencies in cm-1.
         temperature (float): Temperature in Kelvin (default 298.15 K).
         pressure (float): Pressure in atmospheres (default 1 atm).
         volume (float): Volume in liters (optional, can be calculated or provided).
@@ -19,10 +19,11 @@ class Molecule3DMechanics:
         self.kb = Boltzmann  # Boltzmann constant
         self.na = Avogadro  # Avogadro's number
         self.r = gas_constant  # Gas constant
+        self.c = c  # Gas constant
  
         self.mass = mass
         self.rotational_constants = rotational_constants
-        self.vibrational_frequencies = vibrational_frequencies
+        self.vibrational_frequencies = vibrational_frequencies * c * 100 # conversion to Hz
         self.temperature = temperature
         self.pressure = pressure
         self.volume = None
