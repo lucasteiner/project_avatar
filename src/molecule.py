@@ -1,5 +1,6 @@
 #!/bin/env python3
 import numpy as np
+import re
 from molmass import Formula, ELEMENTS
 from collections import Counter
 from mechanics import Mechanics
@@ -13,16 +14,20 @@ class Atom:
     def distance_to(self, other_atom):
         return np.linalg.norm(self.position - other_atom.position)
 
+    def __repr__(self):
+        return (f"{self.symbol} {self.position}\n")
+
 
 class Molecule:
-    def __init__(self, name="Unnamed Molecule"):
+    def __init__(self, name="Unnamed Molecule", energy=None):
 
         # Attributes
         self.name = name
         self.atoms = []
 
         # Read only
-        #self._dimension = None
+        self._dimension = None
+        self.energy = energy
 
     def add_atom(self, atom):
         """
@@ -152,6 +157,7 @@ class Molecule:
 
     @property
     def dimension(self):
+        self._dimension=self._update_dimension()
         return self._dimension
 
     def _update_dimension(self, linearity_threshold=1e-5):
@@ -207,15 +213,34 @@ class Molecule:
                 self._dimension = 2  # Linear molecule
             else:
                 self._dimension = 3  # 3D molecule
-            
-
+        return
+    
+    
     def __repr__(self):
-        return (f"Molecule({self.name}, Electronic Energy: {self._electronic_energy}, "
-                f"Gibbs Free Energy: {self._gibbs_free_energy}, "
-                f"Vibrational Frequencies: {self._vibrational_frequencies}, "
-                f"Temperature: {self._temperature} K, "
-                f"Inner Energy: {self._inner_energy}, Enthalpy: {self._enthalpy}, "
-                f"Entropy: {self._entropy}, Helmholtz Free Energy: {self._helmholz_free_energy})")
+        return (f"Molecule: {self.name}\n {self.atoms}")
+        #return (f"Molecule({self.name}, Electronic Energy: {self.energy}, ")
+
+    @classmethod
+    def from_lists(cls, element_symbols, xyz_coords, molecule_name="Unnamed Molecule"):
+        """
+        Create a Molecule object from lists of element symbols and XYZ coordinates.
+    
+        :param element_symbols: List of element symbols (e.g., ['H', 'O', 'H']).
+        :param xyz_coords: List of XYZ coordinates (e.g., [[0,0,0], [0.76,0.58,0], [-0.76,0.58,0]]).
+        :param molecule_name: Name of the molecule (default is "Unnamed Molecule").
+        :return: Molecule object.
+        """
+        molecule = cls(molecule_name)
+    
+        if len(element_symbols) != len(xyz_coords):
+            raise ValueError("Number of element symbols must match the number of XYZ coordinate sets.")
+    
+        # Iterate over the symbols and coordinates, creating atoms and adding them to the molecule
+        for symbol, coords in zip(element_symbols, xyz_coords):
+            atom = Atom(symbol, *coords)  # Unpacking the xyz coordinates
+            molecule.add_atom(atom)
+    
+        return molecule
 
 
     @staticmethod
@@ -304,29 +329,6 @@ class Molecule:
 
         return molecule
     
-    
-    @classmethod
-    def from_lists(cls, element_symbols, xyz_coords, molecule_name="Unnamed Molecule"):
-        """
-        Create a Molecule object from lists of element symbols and XYZ coordinates.
-    
-        :param element_symbols: List of element symbols (e.g., ['H', 'O', 'H']).
-        :param xyz_coords: List of XYZ coordinates (e.g., [[0,0,0], [0.76,0.58,0], [-0.76,0.58,0]]).
-        :param molecule_name: Name of the molecule (default is "Unnamed Molecule").
-        :return: Molecule object.
-        """
-        molecule = cls(molecule_name)
-    
-        if len(element_symbols) != len(xyz_coords):
-            raise ValueError("Number of element symbols must match the number of XYZ coordinate sets.")
-    
-        # Iterate over the symbols and coordinates, creating atoms and adding them to the molecule
-        for symbol, coords in zip(element_symbols, xyz_coords):
-            atom = Atom(symbol, *coords)  # Unpacking the xyz coordinates
-            molecule.add_atom(atom)
-    
-        return molecule
-
 #
 #    @classmethod
 #    def from_dataframe(cls, df, element_column_str='Elements', xyz_column_str='xyz Coordinates'):
