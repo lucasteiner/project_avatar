@@ -10,8 +10,8 @@ Welcome to Project Avatar's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   molecule
-   molecule3d_mechanics
+   molecule.py
+   thermomolecule.py
 
 
 Indices and tables

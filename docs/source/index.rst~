@@ -10,6 +10,8 @@ Welcome to Project Avatar's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   molecule
+   molecule3d_mechanics
 
 
 Indices and tables
@@ -18,3 +20,6 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+
+
