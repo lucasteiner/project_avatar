@@ -1,0 +1,524 @@
+
+ freeh (login.curta.zedat.fu-berlin.de) : TURBOMOLE rev. V7-6-1 30 Apr 2022 at 11:12:13 compiled Apr 30th 2022
+ Copyright (C) 2022 TURBOMOLE GmbH, Karlsruhe
+
+
+    2024-09-30 18:07:45.562 
+
+
+
+                      f r e e   e n t h a l p y - program
+                            quantum chemistry group
+                            universitaet  karlsruhe
+                                     germany
+
+
+  -*--*--*--*--*--*--*--*--*--*--*--*--*--*--*--*--*--*
+ 
+   This program calculates partition sums and chemical
+   potentials for linear and non-linear molecules in
+   harmonic and ideal gas approximations.
+ 
+   Essential inputs from the control file comprise :
+   $vibrational spectrum
+   $coord
+   $atoms
+   $symmetry
+ 
+  -*--*--*--*--*--*--*--*--*--*--*--*--*--*--*--*--*--*
+ 
+
+
+              +--------------------------------------------------+
+              | Atomic coordinate, charge and isotop information |
+              +--------------------------------------------------+
+
+                    atomic coordinates            atom    charge  isotop
+          0.00000000   -0.03349515    0.00000000    o      8.000     0
+          1.43369026    1.12412708    0.00000000    h      1.000     0
+         -1.43369026    1.12412708    0.00000000    h      1.000     0
+ 
+       center of nuclear mass  :    0.00000000    0.09604428    0.00000000
+       center of nuclear charge:    0.00000000    0.19802930    0.00000000
+
+ symmetry group of the molecule :   c1 
+
+ the group has the following generators :
+   c1(z)
+
+    1 symmetry operations found
+
+ there are 1 real representations :   a   
+
+ maximum number of shells which are related by symmetry :  1
+
+
+ Multiplicity of the electronic wavefunction:        1
+ Spatial degeneracy of the electronic wavefunction:  1
+ Total degeneracy of the electronic wavefunction:    1
+
+   ***  vibrational spectroscopic data read from $vibrational spectrum
+        file=<vibspectrum>  ***
+
+    VIBRATIONAL SPECTRUM :
+
+   mode     symmetry     wave number     intensity     selection rules
+                          cm**(-1)         km/mol   
+     1                        0.00       0.0000000        -       - 
+     2                        0.00       0.0000000        -       - 
+     3                        0.00       0.0000000        -       - 
+     4                        0.00       0.0000000        -       - 
+     5                        0.00       0.0000000        -       - 
+     6                        0.00       0.0000000        -       - 
+     7        a            1608.67      48.2120200       YES     YES
+     8        a            3684.12       2.6569300       YES     YES
+     9        a            3783.07      20.9399700       YES     YES
+
+ -----------------------------------------
+ Judged from the schoenflies symbol c1  ,
+ the number of rotations in the nuclear   
+ exchange group is SIGMA=   1. SIGMA is 
+ the symmetry number entering the quasi-  
+ classical rotational partition sum.      
+ Hit RETURN to accept or enter a different
+ integer value.                           
+ -----------------------------------------
+
+ 
+
+ center of mass :     0.00000000000000   -0.00000000000000    0.00000000000000
+    1 o     0.00000000000019   -0.12953943528477    0.00000000000000
+    2 h     1.43369025922160    1.02808280052690    0.00000000000000
+    3 h    -1.43369025922466    1.02808280052783    0.00000000000000
+ 
+         2.39923
+         0.00000    4.14370
+         0.00000    0.00000    6.54293
+ 
+          ----------------------------------------
+          eigenvalues & -vectors of inertia tensor
+          ----------------------------------------
+ 
+         2.39923    4.14370    6.54293
+
+ 
+         0.00000    0.00000    0.00000
+         0.00000    0.00000    0.00000
+         0.00000    0.00000    0.00000
+
+
+ wavenumbers calculated by scf theory tend to be
+ 1-10% too large and may be corrected by scaling
+ -----------------------------------------------
+ default value of scaling factor (BP/SVP):   0.9914
+ enter new value for corr, if you want to change
+ -----------------------------------------------
+
+
+ enter the range of temperatures (K) and pressures (MPa)
+ at which you want to calculate partition sums and free enthalpies :
+
+ tstart=<real> tend=<real> numt=<integer> pstart=<real> pend=<real> nump=<integer>
+
+ default values are  :
+ tstart=298.15 tend=298.15 numt=1 pstart=0.1 pend=0.1 nump=1
+
+ or enter  q  or  *  to quit
+
+
+ 
+          ------------------
+           your wishes are :
+          ------------------
+
+  pstart=  0.1000      pend=  0.1000      nump=   1
+
+  tstart=   298.1      tend=   298.1      numt=   1
+ 
+           zero point vibrational energy
+           -----------------------------
+           zpe=   53.82     kJ/mol
+      ----------------------------------------------
+          Rigid Rotor Harmonic Oscillator (RRHO):   
+      ----------------------------------------------
+ 
+   T        p       ln(qtrans) ln(qrot) ln(qvib) chem.pot.   energy    entropy
+  (K)      (MPa)                                 (kJ/mol)   (kJ/mol) (kJ/mol/K)
+ 
+ 298.15   0.1000000      14.94     4.53     0.00      5.56     61.26   0.19514
+ 
+   T        P              Cv            Cp       enthalpy
+  (K)     (MPa)        (kJ/mol-K)    (kJ/mol-K)   (kJ/mol)
+ 298.15   0.1000000     0.0251671     0.0334814     63.74
+ 
+ ******************************************************
+ | qtrans=(m*k*T/(2*pi))^1.5*v h/(2*pi)=1a.u.(omitted)|
+ |   m=mol. mass in a.u. v=vol. per mol. of ideal gas |
+ | qvib=product(i) 1/(1-exp(-e(i)/kT)                 |
+ |   e(i)=frequency of i-th vibrational mode          |
+ | qrot=((2*pi*kT)^3*A*B*C)^0.5/(sigma*pi)            |
+ |   A,B,C=moments of inertia in a.u.                 |
+ | qrot=2*pi*kT*A/(sigma*pi) for lin. mol.            |
+ | chem.pot.=ZPE-RT*ln(qtrans*qrot*qvib)              |
+ |   ZPE=zero point vibrational energy                |
+ | energy=ZPE+3RT                                     |
+ |  +sum(i) e(i)*(1+exp(-e(i)/kT))/2*(1-exp(-e(i)/kT) |
+ |       =3/2RT for atoms etc.                        |
+ | enthalpy=energy+RT                                 |
+ | entropy=(energy+RT-chem.pot.)/T                    |
+ | const.vol.Heat Capacity : Cv=d(energy)/dT          |
+ | const.press.Heat Capacity : Cp=d(enthalpy)/dT      |
+ | These formulas are applicable only if              |
+ | * rotation can be treated classically              |
+ | * the molecule forms an ideal gas/solution         |
+ | * the harmonic approximation to vibrational        |
+ |   modes is not grossly misleading                  |
+ | Electronic (SCF or MP2) energies still have        |
+ | to be added to obtain "absolute potentials"        |
+ | for chemical equilibrium constants.                |
+ ******************************************************
+ 
+
+ enter the range of temperatures (K) and pressures (MPa)
+ at which you want to calculate partition sums and free enthalpies :
+
+ tstart=<real> tend=<real> numt=<integer> pstart=<real> pend=<real> nump=<integer>
+
+ default values are  :
+ tstart=298.15 tend=298.15 numt=1 pstart=0.1 pend=0.1 nump=1
+
+ or enter  q  or  *  to quit
+
+
+ 
+          ------------------
+           your wishes are :
+          ------------------
+
+  pstart=  0.1000      pend=  0.1000      nump=   1
+
+  tstart=   298.1      tend=   298.1      numt=   1
+ 
+           zero point vibrational energy
+           -----------------------------
+           zpe=   53.82     kJ/mol
+      ----------------------------------------------
+          Rigid Rotor Harmonic Oscillator (RRHO):   
+      ----------------------------------------------
+ 
+   T        p       ln(qtrans) ln(qrot) ln(qvib) chem.pot.   energy    entropy
+  (K)      (MPa)                                 (kJ/mol)   (kJ/mol) (kJ/mol/K)
+ 
+ 298.15   0.1000000      14.94     4.53     0.00      5.56     61.26   0.19514
+ 
+   T        P              Cv            Cp       enthalpy
+  (K)     (MPa)        (kJ/mol-K)    (kJ/mol-K)   (kJ/mol)
+ 298.15   0.1000000     0.0251671     0.0334814     63.74
+ 
+ ******************************************************
+ | qtrans=(m*k*T/(2*pi))^1.5*v h/(2*pi)=1a.u.(omitted)|
+ |   m=mol. mass in a.u. v=vol. per mol. of ideal gas |
+ | qvib=product(i) 1/(1-exp(-e(i)/kT)                 |
+ |   e(i)=frequency of i-th vibrational mode          |
+ | qrot=((2*pi*kT)^3*A*B*C)^0.5/(sigma*pi)            |
+ |   A,B,C=moments of inertia in a.u.                 |
+ | qrot=2*pi*kT*A/(sigma*pi) for lin. mol.            |
+ | chem.pot.=ZPE-RT*ln(qtrans*qrot*qvib)              |
+ |   ZPE=zero point vibrational energy                |
+ | energy=ZPE+3RT                                     |
+ |  +sum(i) e(i)*(1+exp(-e(i)/kT))/2*(1-exp(-e(i)/kT) |
+ |       =3/2RT for atoms etc.                        |
+ | enthalpy=energy+RT                                 |
+ | entropy=(energy+RT-chem.pot.)/T                    |
+ | const.vol.Heat Capacity : Cv=d(energy)/dT          |
+ | const.press.Heat Capacity : Cp=d(enthalpy)/dT      |
+ | These formulas are applicable only if              |
+ | * rotation can be treated classically              |
+ | * the molecule forms an ideal gas/solution         |
+ | * the harmonic approximation to vibrational        |
+ |   modes is not grossly misleading                  |
+ | Electronic (SCF or MP2) energies still have        |
+ | to be added to obtain "absolute potentials"        |
+ | for chemical equilibrium constants.                |
+ ******************************************************
+ 
+
+ enter the range of temperatures (K) and pressures (MPa)
+ at which you want to calculate partition sums and free enthalpies :
+
+ tstart=<real> tend=<real> numt=<integer> pstart=<real> pend=<real> nump=<integer>
+
+ default values are  :
+ tstart=298.15 tend=298.15 numt=1 pstart=0.1 pend=0.1 nump=1
+
+ or enter  q  or  *  to quit
+
+
+ 
+          ------------------
+           your wishes are :
+          ------------------
+
+  pstart=  0.1000      pend=  0.1000      nump=   1
+
+  tstart=   298.1      tend=   298.1      numt=   1
+ 
+           zero point vibrational energy
+           -----------------------------
+           zpe=   53.82     kJ/mol
+      ----------------------------------------------
+          Rigid Rotor Harmonic Oscillator (RRHO):   
+      ----------------------------------------------
+ 
+   T        p       ln(qtrans) ln(qrot) ln(qvib) chem.pot.   energy    entropy
+  (K)      (MPa)                                 (kJ/mol)   (kJ/mol) (kJ/mol/K)
+ 
+ 298.15   0.1000000      14.94     4.53     0.00      5.56     61.26   0.19514
+ 
+   T        P              Cv            Cp       enthalpy
+  (K)     (MPa)        (kJ/mol-K)    (kJ/mol-K)   (kJ/mol)
+ 298.15   0.1000000     0.0251671     0.0334814     63.74
+ 
+ ******************************************************
+ | qtrans=(m*k*T/(2*pi))^1.5*v h/(2*pi)=1a.u.(omitted)|
+ |   m=mol. mass in a.u. v=vol. per mol. of ideal gas |
+ | qvib=product(i) 1/(1-exp(-e(i)/kT)                 |
+ |   e(i)=frequency of i-th vibrational mode          |
+ | qrot=((2*pi*kT)^3*A*B*C)^0.5/(sigma*pi)            |
+ |   A,B,C=moments of inertia in a.u.                 |
+ | qrot=2*pi*kT*A/(sigma*pi) for lin. mol.            |
+ | chem.pot.=ZPE-RT*ln(qtrans*qrot*qvib)              |
+ |   ZPE=zero point vibrational energy                |
+ | energy=ZPE+3RT                                     |
+ |  +sum(i) e(i)*(1+exp(-e(i)/kT))/2*(1-exp(-e(i)/kT) |
+ |       =3/2RT for atoms etc.                        |
+ | enthalpy=energy+RT                                 |
+ | entropy=(energy+RT-chem.pot.)/T                    |
+ | const.vol.Heat Capacity : Cv=d(energy)/dT          |
+ | const.press.Heat Capacity : Cp=d(enthalpy)/dT      |
+ | These formulas are applicable only if              |
+ | * rotation can be treated classically              |
+ | * the molecule forms an ideal gas/solution         |
+ | * the harmonic approximation to vibrational        |
+ |   modes is not grossly misleading                  |
+ | Electronic (SCF or MP2) energies still have        |
+ | to be added to obtain "absolute potentials"        |
+ | for chemical equilibrium constants.                |
+ ******************************************************
+ 
+
+ enter the range of temperatures (K) and pressures (MPa)
+ at which you want to calculate partition sums and free enthalpies :
+
+ tstart=<real> tend=<real> numt=<integer> pstart=<real> pend=<real> nump=<integer>
+
+ default values are  :
+ tstart=298.15 tend=298.15 numt=1 pstart=0.1 pend=0.1 nump=1
+
+ or enter  q  or  *  to quit
+
+
+ 
+          ------------------
+           your wishes are :
+          ------------------
+
+  pstart=  0.1000      pend=  0.1000      nump=   1
+
+  tstart=   298.1      tend=   298.1      numt=   1
+ 
+           zero point vibrational energy
+           -----------------------------
+           zpe=   53.82     kJ/mol
+      ----------------------------------------------
+          Rigid Rotor Harmonic Oscillator (RRHO):   
+      ----------------------------------------------
+ 
+   T        p       ln(qtrans) ln(qrot) ln(qvib) chem.pot.   energy    entropy
+  (K)      (MPa)                                 (kJ/mol)   (kJ/mol) (kJ/mol/K)
+ 
+ 298.15   0.1000000      14.94     4.53     0.00      5.56     61.26   0.19514
+ 
+   T        P              Cv            Cp       enthalpy
+  (K)     (MPa)        (kJ/mol-K)    (kJ/mol-K)   (kJ/mol)
+ 298.15   0.1000000     0.0251671     0.0334814     63.74
+ 
+ ******************************************************
+ | qtrans=(m*k*T/(2*pi))^1.5*v h/(2*pi)=1a.u.(omitted)|
+ |   m=mol. mass in a.u. v=vol. per mol. of ideal gas |
+ | qvib=product(i) 1/(1-exp(-e(i)/kT)                 |
+ |   e(i)=frequency of i-th vibrational mode          |
+ | qrot=((2*pi*kT)^3*A*B*C)^0.5/(sigma*pi)            |
+ |   A,B,C=moments of inertia in a.u.                 |
+ | qrot=2*pi*kT*A/(sigma*pi) for lin. mol.            |
+ | chem.pot.=ZPE-RT*ln(qtrans*qrot*qvib)              |
+ |   ZPE=zero point vibrational energy                |
+ | energy=ZPE+3RT                                     |
+ |  +sum(i) e(i)*(1+exp(-e(i)/kT))/2*(1-exp(-e(i)/kT) |
+ |       =3/2RT for atoms etc.                        |
+ | enthalpy=energy+RT                                 |
+ | entropy=(energy+RT-chem.pot.)/T                    |
+ | const.vol.Heat Capacity : Cv=d(energy)/dT          |
+ | const.press.Heat Capacity : Cp=d(enthalpy)/dT      |
+ | These formulas are applicable only if              |
+ | * rotation can be treated classically              |
+ | * the molecule forms an ideal gas/solution         |
+ | * the harmonic approximation to vibrational        |
+ |   modes is not grossly misleading                  |
+ | Electronic (SCF or MP2) energies still have        |
+ | to be added to obtain "absolute potentials"        |
+ | for chemical equilibrium constants.                |
+ ******************************************************
+ 
+
+ enter the range of temperatures (K) and pressures (MPa)
+ at which you want to calculate partition sums and free enthalpies :
+
+ tstart=<real> tend=<real> numt=<integer> pstart=<real> pend=<real> nump=<integer>
+
+ default values are  :
+ tstart=298.15 tend=298.15 numt=1 pstart=0.1 pend=0.1 nump=1
+
+ or enter  q  or  *  to quit
+
+
+ 
+          ------------------
+           your wishes are :
+          ------------------
+
+  pstart=  0.1000      pend=  0.1000      nump=   1
+
+  tstart=   298.1      tend=   298.1      numt=   1
+ 
+           zero point vibrational energy
+           -----------------------------
+           zpe=   53.82     kJ/mol
+      ----------------------------------------------
+          Rigid Rotor Harmonic Oscillator (RRHO):   
+      ----------------------------------------------
+ 
+   T        p       ln(qtrans) ln(qrot) ln(qvib) chem.pot.   energy    entropy
+  (K)      (MPa)                                 (kJ/mol)   (kJ/mol) (kJ/mol/K)
+ 
+ 298.15   0.1000000      14.94     4.53     0.00      5.56     61.26   0.19514
+ 
+   T        P              Cv            Cp       enthalpy
+  (K)     (MPa)        (kJ/mol-K)    (kJ/mol-K)   (kJ/mol)
+ 298.15   0.1000000     0.0251671     0.0334814     63.74
+ 
+ ******************************************************
+ | qtrans=(m*k*T/(2*pi))^1.5*v h/(2*pi)=1a.u.(omitted)|
+ |   m=mol. mass in a.u. v=vol. per mol. of ideal gas |
+ | qvib=product(i) 1/(1-exp(-e(i)/kT)                 |
+ |   e(i)=frequency of i-th vibrational mode          |
+ | qrot=((2*pi*kT)^3*A*B*C)^0.5/(sigma*pi)            |
+ |   A,B,C=moments of inertia in a.u.                 |
+ | qrot=2*pi*kT*A/(sigma*pi) for lin. mol.            |
+ | chem.pot.=ZPE-RT*ln(qtrans*qrot*qvib)              |
+ |   ZPE=zero point vibrational energy                |
+ | energy=ZPE+3RT                                     |
+ |  +sum(i) e(i)*(1+exp(-e(i)/kT))/2*(1-exp(-e(i)/kT) |
+ |       =3/2RT for atoms etc.                        |
+ | enthalpy=energy+RT                                 |
+ | entropy=(energy+RT-chem.pot.)/T                    |
+ | const.vol.Heat Capacity : Cv=d(energy)/dT          |
+ | const.press.Heat Capacity : Cp=d(enthalpy)/dT      |
+ | These formulas are applicable only if              |
+ | * rotation can be treated classically              |
+ | * the molecule forms an ideal gas/solution         |
+ | * the harmonic approximation to vibrational        |
+ |   modes is not grossly misleading                  |
+ | Electronic (SCF or MP2) energies still have        |
+ | to be added to obtain "absolute potentials"        |
+ | for chemical equilibrium constants.                |
+ ******************************************************
+ 
+
+ enter the range of temperatures (K) and pressures (MPa)
+ at which you want to calculate partition sums and free enthalpies :
+
+ tstart=<real> tend=<real> numt=<integer> pstart=<real> pend=<real> nump=<integer>
+
+ default values are  :
+ tstart=298.15 tend=298.15 numt=1 pstart=0.1 pend=0.1 nump=1
+
+ or enter  q  or  *  to quit
+
+
+ 
+          ------------------
+           your wishes are :
+          ------------------
+
+  pstart=  0.1000      pend=  0.1000      nump=   1
+
+  tstart=   298.1      tend=   298.1      numt=   1
+ 
+           zero point vibrational energy
+           -----------------------------
+           zpe=   53.82     kJ/mol
+      ----------------------------------------------
+          Rigid Rotor Harmonic Oscillator (RRHO):   
+      ----------------------------------------------
+ 
+   T        p       ln(qtrans) ln(qrot) ln(qvib) chem.pot.   energy    entropy
+  (K)      (MPa)                                 (kJ/mol)   (kJ/mol) (kJ/mol/K)
+ 
+ 298.15   0.1000000      14.94     4.53     0.00      5.56     61.26   0.19514
+ 
+   T        P              Cv            Cp       enthalpy
+  (K)     (MPa)        (kJ/mol-K)    (kJ/mol-K)   (kJ/mol)
+ 298.15   0.1000000     0.0251671     0.0334814     63.74
+ 
+ ******************************************************
+ | qtrans=(m*k*T/(2*pi))^1.5*v h/(2*pi)=1a.u.(omitted)|
+ |   m=mol. mass in a.u. v=vol. per mol. of ideal gas |
+ | qvib=product(i) 1/(1-exp(-e(i)/kT)                 |
+ |   e(i)=frequency of i-th vibrational mode          |
+ | qrot=((2*pi*kT)^3*A*B*C)^0.5/(sigma*pi)            |
+ |   A,B,C=moments of inertia in a.u.                 |
+ | qrot=2*pi*kT*A/(sigma*pi) for lin. mol.            |
+ | chem.pot.=ZPE-RT*ln(qtrans*qrot*qvib)              |
+ |   ZPE=zero point vibrational energy                |
+ | energy=ZPE+3RT                                     |
+ |  +sum(i) e(i)*(1+exp(-e(i)/kT))/2*(1-exp(-e(i)/kT) |
+ |       =3/2RT for atoms etc.                        |
+ | enthalpy=energy+RT                                 |
+ | entropy=(energy+RT-chem.pot.)/T                    |
+ | const.vol.Heat Capacity : Cv=d(energy)/dT          |
+ | const.press.Heat Capacity : Cp=d(enthalpy)/dT      |
+ | These formulas are applicable only if              |
+ | * rotation can be treated classically              |
+ | * the molecule forms an ideal gas/solution         |
+ | * the harmonic approximation to vibrational        |
+ |   modes is not grossly misleading                  |
+ | Electronic (SCF or MP2) energies still have        |
+ | to be added to obtain "absolute potentials"        |
+ | for chemical equilibrium constants.                |
+ ******************************************************
+ 
+
+ enter the range of temperatures (K) and pressures (MPa)
+ at which you want to calculate partition sums and free enthalpies :
+
+ tstart=<real> tend=<real> numt=<integer> pstart=<real> pend=<real> nump=<integer>
+
+ default values are  :
+ tstart=298.15 tend=298.15 numt=1 pstart=0.1 pend=0.1 nump=1
+
+ or enter  q  or  *  to quit
+
+
+
+
+    ------------------------------------------------------------------------
+         total  cpu-time :   0.02 seconds
+         total wall-time :   5.37 seconds
+    ------------------------------------------------------------------------
+
+   ****  freeh : all done  ****
+
+
+    2024-09-30 18:07:50.906 
+

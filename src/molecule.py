@@ -1,414 +1,277 @@
-#!/bin/env python3
 import numpy as np
-import re
-from molmass import Formula, ELEMENTS
-from collections import Counter
-from mechanics import Mechanics
-import math
 
-class Atom:
-    def __init__(self, symbol, x, y, z):
-        self.symbol = symbol
-        self.position = np.array([x, y, z])
-
-    def distance_to(self, other_atom):
-        return np.linalg.norm(self.position - other_atom.position)
-
-    def __repr__(self):
-        return (f"{self.symbol} {self.position}\n")
-
+# A dictionary of atomic masses for common elements
+atomic_masses = {
+    'H': 1.007841,
+    'He': 4.002602,
+    'Li': 6.94,
+    'Be': 9.0121831,
+    'B': 10.811,
+    'C': 12.01074,
+    'N': 14.006703,
+    'O': 15.999405,
+    'F': 18.998403163,
+    'Ne': 20.1797,
+    'Na': 22.98976928,
+    'Mg': 24.3051,
+    'Al': 26.9815385,
+    'Si': 28.0855,
+    'P': 30.973761998,
+    'S': 32.0648,
+    'Cl': 35.4529,
+    'Ar': 39.948,
+    'K': 39.0983,
+    'Ca': 40.078,
+    'Fe': 55.845,
+    'Cu': 63.546,
+    'Zn': 65.38,
+    'Br': 79.9035,
+    'I':126.90447,
+    'Sm':150.36,
+    # Add more elements as needed
+    # https://github.com/cgohlke/molmass/blob/master/molmass/elements.py
+}
 
 class Molecule:
-    def __init__(self, name="Unnamed Molecule", energy=None):
-
-        # Attributes
-        self.name = name
-        self.atoms = []
-
-        # Read only
-        self._dimension = None
+    def __init__(self, symbols, coordinates, energy=None, frequencies=None, gas_phase=None):
+        """
+        Initialize a Molecule object.
+        """
+        self.symbols = np.array(symbols)
+        self.coordinates = np.array(coordinates, dtype=float)
         self.energy = energy
+        self.frequencies = np.array(frequencies) if frequencies is not None else None
+        self.gas_phase = gas_phase
 
-    def add_atom(self, atom):
-        """
-        Add an Atom object to the molecule and update the formula and dimension.
-        """
-        self.atoms.append(atom)
-        self._update_formula()
-        #self._update_dimension()
+        # Validate that the number of symbols matches the number of coordinate sets
+        if len(self.symbols) != len(self.coordinates):
+            raise ValueError("The number of symbols and coordinate sets must be the same.")
 
-    def remove_atom(self, atom):
+    @classmethod
+    def from_xyz(cls, filename, energy=None, frequencies=None, gas_phase=None):
         """
-        Remove an Atom object from the molecule and update the formula and dimension.
-        """
-        if atom in self.atoms:
-            self.atoms.remove(atom)
-            self._update_formula()
-            #self._update_dimension()
-        else:
-            raise ValueError("Atom not found in the molecule.")
+        Create a Molecule instance from an XYZ-format file.
 
-    def get_atom(self, index):
-        """
-        Get an Atom object by its index.
-        :param index: The atom's index (int).
-        :return: Atom object.
-        """
-        if 0 <= index < len(self.atoms):
-            return self.atoms[index]
-        else:
-            raise IndexError("Atom index out of range.")
+        Parameters:
+        filename (str): Path to the XYZ file.
+        energy (float, optional): Energy of the molecule.
+        frequencies (list, optional): Vibrational frequencies.
+        gas_phase (bool, optional): Indicates if the molecule is in the gas phase.
 
-    def get_atoms_by_symbol(self, symbol):
+        Returns:
+        Molecule: An instance of the Molecule class.
         """
-        Get all Atom objects that match a given element symbol.
-        :param symbol: The element symbol (e.g., 'H').
-        :return: List of Atom objects.
+        symbols = []
+        coordinates = []
+        with open(filename, 'r') as file:
+            lines = file.readlines()
+            if len(lines) < 3:
+                raise ValueError("The XYZ file is incomplete or corrupted.")
+            try:
+                num_atoms = int(lines[0].strip())
+            except ValueError:
+                raise ValueError("The first line of the XYZ file should be the number of atoms.")
+            atom_lines = lines[2:2+num_atoms]
+            for line in atom_lines:
+                parts = line.strip().split()
+                if len(parts) < 4:
+                    raise ValueError("Each atom line must have at least 4 entries: symbol, x, y, z.")
+                symbol = parts[0]
+                if symbol not in atomic_masses:
+                    raise ValueError(f"Unknown element symbol: {symbol}")
+                x, y, z = map(float, parts[1:4])
+                symbols.append(symbol)
+                coordinates.append([x, y, z])
+        return cls(symbols, coordinates, energy, frequencies, gas_phase)
+
+    def __repr__(self):
         """
-        return [atom for atom in self.atoms if atom.symbol == symbol]
-
-    def molecular_weight(self):
-        return self.formula.mass if self.formula else 0
-
-    def formula_str(self):
-        return self.formula.formula if self.formula else "N/A"
+        Return a string representation of the Molecule.
+        """
+        lines = []
+        for symbol, coord in zip(self.symbols, self.coordinates):
+            x, y, z = coord
+            lines.append(f"{symbol} {x:.6f} {y:.6f} {z:.6f}")
+        return '\n'.join(lines)
 
     def center_of_mass(self):
-        total_mass = sum(ELEMENTS[atom.symbol].mass for atom in self.atoms)
-        weighted_positions = sum(ELEMENTS[atom.symbol].mass * atom.position for atom in self.atoms)
-        return weighted_positions / total_mass if total_mass else np.array([0.0, 0.0, 0.0])
-
-    def _generate_formula(self):
         """
-        Generate the molecular formula based on current atoms.
+        Calculate and return the center of mass of the molecule.
         """
-        element_symbols = [atom.symbol for atom in self.atoms]
-        atom_counts = Counter(element_symbols)
-        formula_str = ''.join(f"{symbol}{count if count > 1 else ''}" for symbol, count in atom_counts.items())
-        return Formula(formula_str)
+        masses = np.array([atomic_masses[symbol] for symbol in self.symbols])
+        total_mass = masses.sum()
+        com = np.dot(masses, self.coordinates) / total_mass
+        return com
 
-    def _update_formula(self):
+    def molecular_mass(self):
         """
-        Update the molecular formula after atoms are added or removed.
-        """
-        self.formula = self._generate_formula() if self.atoms else None
-
-
-
-    # Property for vibrational_frequencies
-    @property
-    def vibrational_frequencies(self):
-        return self._vibrational_frequencies
-
-    @vibrational_frequencies.setter
-    def vibrational_frequencies(self, frequencies):
-        if not isinstance(frequencies, list):
-            raise ValueError("Vibrational frequencies must be provided as a list.")
-        if not all(isinstance(f, (int, float)) for f in frequencies):
-            raise ValueError("All vibrational frequencies must be numeric values.")
-        self._vibrational_frequencies = frequencies
-
-    def calculate_mechanics(self, vibrational_frequencies=None, 
-            temperature=298.15, pressure=1.0, volume=None, qRRHO=100, pos_freqs=80):
-        """
-        Calculate statistical mechanics for the molecule
-
-        qRRHO (float): threshold in wavenumbers for treating low frequencies as free rotors
-        pos_freqs (float): threshold in wavenumbers for treating low imaginary frequencies as positive frequencies 
-        (Do not go below lowest frequency of transition states)
-        """
-        if volume is None:
-            volume=self.volume
-
-        if vibrational_frequencies is None:
-            vibrational_frequencies=self.vibrational_frequencies
-        else:
-            self.vibrational_frequencies=vibrational_frequencies
-        if self.vibrational_frequencies is None:
-            raise ValueError(f"Expected vibrational frequencies in function calculate_mechanics, \n {print(self)}.")
-        
-        linear = self.is_linear(vibrational_frequencies)
-
-        self.mechanics = Mechanics(self, linear, vibrational_frequencies, 
-                temperature=298.15, pressure=1.0, volume=volume)
-
-    @staticmethod
-    def is_linear(frequencies):
-        """
-        Determine if a molecule is linear based on its vibrational frequencies.
-    
-        Parameters:
-        frequencies (list of float): Vibrational frequencies.
-    
-        Returns:
-        bool: True if the molecule is linear (5 zero frequencies),
-              False if non-linear (6 zero frequencies).
-    
-        Raises:
-        ValueError: If the number of zero frequencies is not 5 or 6.
-        """
-        num_zero_freqs = sum(math.isclose(freq, 0.0) for freq in frequencies)
-        if num_zero_freqs == 5:
-            return True  # Linear molecule
-        elif num_zero_freqs == 6:
-            return False  # Non-linear molecule
-        else:
-            raise ValueError(f"Unexpected number of zero frequencies ({num_zero_freqs}).")
-
-    @property
-    def dimension(self):
-        self._dimension=self._update_dimension()
-        return self._dimension
-
-    def _update_dimension(self, linearity_threshold=1e-5):
-        """
-        Update the dimension of the molecule based on the number and arrangement of atoms.
-        Determines if the molecule is linear or 3D.
-    
-        Parameters:
-        linearity_threshold (float): Tolerance for determining linearity of the molecule.
-                                     Default is 1e-5.
-        """
-        num_atoms = len(self.atoms)
-    
-        if num_atoms == 0:
-            self._dimension = None
-        elif num_atoms == 1:
-            self._dimension = 1
-        elif num_atoms == 2:
-            self._dimension = 2
-        else:
-            # For 3 or more atoms, check if they are linear (dimension 2) or 3D (dimension 3)
-            atom_positions = np.array([atom.position for atom in self.atoms])
-    
-            # Define the line using the first two atoms
-            point_on_line = atom_positions[0]
-            direction_vector = atom_positions[1] - atom_positions[0]
-            norm_direction = np.linalg.norm(direction_vector)
-    
-            if norm_direction == 0:
-                # First two atoms are at the same position; cannot define a line
-                self._dimension = 3  # Considered 3D due to undefined direction
-                return
-    
-            # Normalize the direction vector
-            direction_unit = direction_vector / norm_direction
-    
-            # Check if all other atoms lie on the line within the threshold
-            linear = True
-            for i in range(2, num_atoms):
-                vec = atom_positions[i] - point_on_line
-                vec_norm = np.linalg.norm(vec)
-                if vec_norm == 0:
-                    # Atom coincides with the point on the line
-                    continue  # No deviation, move to the next atom
-                # Compute the sine of the angle between vec and direction_unit
-                cross_prod = np.cross(direction_unit, vec)
-                sin_theta = np.linalg.norm(cross_prod) / vec_norm
-                if sin_theta > linearity_threshold:
-                    linear = False
-                    break
-    
-            if linear:
-                self._dimension = 2  # Linear molecule
-            else:
-                self._dimension = 3  # 3D molecule
-        return
-    
-    
-    def __repr__(self):
-        return (f"Molecule: {self.name}\n {self.atoms}")
-        #return (f"Molecule({self.name}, Electronic Energy: {self.energy}, ")
-
-    @classmethod
-    def from_lists(cls, element_symbols, xyz_coords, molecule_name="Unnamed Molecule"):
-        """
-        Create a Molecule object from lists of element symbols and XYZ coordinates.
-    
-        :param element_symbols: List of element symbols (e.g., ['H', 'O', 'H']).
-        :param xyz_coords: List of XYZ coordinates (e.g., [[0,0,0], [0.76,0.58,0], [-0.76,0.58,0]]).
-        :param molecule_name: Name of the molecule (default is "Unnamed Molecule").
-        :return: Molecule object.
-        """
-        molecule = cls(molecule_name)
-    
-        if len(element_symbols) != len(xyz_coords):
-            raise ValueError("Number of element symbols must match the number of XYZ coordinate sets.")
-    
-        # Iterate over the symbols and coordinates, creating atoms and adding them to the molecule
-        for symbol, coords in zip(element_symbols, xyz_coords):
-            atom = Atom(symbol, *coords)  # Unpacking the xyz coordinates
-            molecule.add_atom(atom)
-    
-        return molecule
-
-
-    @staticmethod
-    def extract_energy(comment_line):
-        """
-        Extracts the energy from the comment line using multiple regex patterns.
-
-        Parameters:
-        comment_line (str): The comment line from which to extract the energy.
+        Calculate the molecular mass in g/mol.
 
         Returns:
-        float or None: The extracted energy, or None if no energy is found.
+        float: Molecular mass.
         """
-        # List of regex patterns to match different energy formats
-        energy_patterns = [
-            r"Energy\s*=\s*(-?\d+\.\d+)",   # Matches 'Energy = -1234.56789'
-            r"dE\s*=\s*(-?\d+\.\d+)",       # Matches 'dE = -1234.56789'
-            r"\s*(-?\d+\.\d+)"              # Matches floating-point number with optional spaces
-        ]
+        masses = np.array([atomic_masses[symbol] for symbol in self.symbols])
+        return masses.sum()
 
-        for pattern in energy_patterns:
-            match = re.search(pattern, comment_line)
-            if match:
-                return float(match.group(1))
-
-        return None
-
-#    @classmethod
-#    def from_ensemble_file(cls, filename):
-#        """
-#        Class method to parse an XYZ file with multiple molecular structures and energies.
-#
-#        Parameters:
-#        filename (str): Path to the XYZ file.
-#
-#        Returns:
-#        list: A list of Molecule objects with their respective atoms and energy.
-#        """
-#        with open(filename, 'r') as file:
-#            lines = file.readlines()
-#
-#        molecules = []
-#        i = 0
-#        while i < len(lines):
-#            natoms = int(lines[i].strip())  # Number of atoms
-#            comment_line = lines[i + 1].strip()
-#            energy = cls.extract_energy(comment_line)  # Extract energy from the comment line
-#
-#            molecule = cls(name=f"Molecule_{len(molecules)}", energy=energy)
-#
-#            # Parse atoms and their coordinates
-#            for j in range(natoms):
-#                parts = lines[i + 2 + j].split()
-#                symbol = parts[0]
-#                coords = np.array([float(parts[1]), float(parts[2]), float(parts[3])])
-#                atom = Atom(symbol, *coords)
-#                molecule.add_atom(atom)
-#
-#            molecules.append(molecule)
-#            i += 2 + natoms  # Move to the next molecule block
-#
-#        return molecules
-
-    @classmethod
-    def from_xyz_file(cls, filename, molecule_name="Unnamed Molecule"):
+    def moments_of_inertia(self):
         """
-        Parse an XYZ file and create a Molecule object.
-        
-        :param filename: Path to the XYZ file.
-        :param molecule_name: Name of the molecule (default is "Unnamed Molecule").
-        :return: Molecule object.
+        Calculate and return the principal moments of inertia of the molecule.
         """
-    
-        with open(filename, 'r') as file:
-            # Read the number of atoms (first line) and optional comment (second line)
-            num_atoms = int(file.readline().strip())
-            comment_line = file.readline()  # Skip the comment line
-            energy = cls.extract_energy(comment_line)  # Extract energy from the comment line
-            molecule = cls(molecule_name, energy=energy)
-            
-            # Read atom data
-            for line in file:
-                symbol, x, y, z = line.split()
-                atom = Atom(symbol, float(x), float(y), float(z))
-                molecule.add_atom(atom)
+        masses = np.array([atomic_masses[symbol] for symbol in self.symbols])
+        # Center the coordinates around the center of mass
+        coords = self.coordinates - self.center_of_mass()
 
-        return molecule
-    
-#
-#    @classmethod
-#    def from_dataframe(cls, df, element_column_str='Elements', xyz_column_str='xyz Coordinates'):
-#        """
-#        Create a list of Molecule objects from a DataFrame.
-#    
-#        :param df: DataFrame with 'Elements' and 'xyz Coordinates' columns.
-#        :return: List of Molecule objects.
-#        """
-#        molecules = []
-#    
-#        for index, row in df.iterrows():
-#            elements = [elem.upper() for elem in row[element_column_str]]
-#            coordinates = row[xyz_column_str]
-#            molecule_name = f"{index}"  # You can customize the naming
-#            molecule = cls.from_lists(elements, coordinates, molecule_name=molecule_name)
-#            molecules.append(molecule)
-#    
-#        return molecules
+        # Initialize the inertia tensor
+        inertia_tensor = np.zeros((3, 3))
+        for i in range(len(masses)):
+            mass = masses[i]
+            x, y, z = coords[i]
+            inertia_tensor[0, 0] += mass * (y**2 + z**2)
+            inertia_tensor[1, 1] += mass * (x**2 + z**2)
+            inertia_tensor[2, 2] += mass * (x**2 + y**2)
+            inertia_tensor[0, 1] -= mass * x * y
+            inertia_tensor[0, 2] -= mass * x * z
+            inertia_tensor[1, 2] -= mass * y * z
 
+        # Complete the symmetric tensor
+        inertia_tensor[1, 0] = inertia_tensor[0, 1]
+        inertia_tensor[2, 0] = inertia_tensor[0, 2]
+        inertia_tensor[2, 1] = inertia_tensor[1, 2]
 
+        # Calculate eigenvalues (principal moments of inertia)
+        moments, _ = np.linalg.eigh(inertia_tensor)
+        return moments
 
-# Example usage
-if __name__ == "__main__":
-    # Element symbols and XYZ coordinates for a water molecule
-    element_symbols = ['O', 'H', 'H']
-    xyz_coords = [[0.0, 0.0, 0.0], [0.757, 0.586, 0.0], [-0.757, 0.586, 0.0]]
+    def is_linear(self, tolerance=1e-3):
+        """
+        Determine if the molecule is linear within a specified tolerance.
 
+        Parameters:
+        tolerance (float): The threshold below which a moment of inertia is considered zero.
 
-    # Create the water molecule from lists
-    water_molecule = Molecule.from_lists(element_symbols, xyz_coords, molecule_name="Water")
-    #water_molecule = Molecule.from_xyz_file("water.xyz", molecule_name="Water")
+        Returns:
+        bool: True if the molecule is linear, False otherwise.
+        """
+        moments = self.moments_of_inertia()
+        # Sort the moments to ensure consistent order
+        moments = np.sort(moments)
+        # For a linear molecule, two moments should be approximately zero
+        zero_moments = moments < tolerance
+        if np.sum(zero_moments) >= 1:
+            return True
+        else:
+            return False
 
-    # Display molecule details
-    print(water_molecule)
+    def recenter(self):
+        """
+        Recenter the molecule so that its center of mass is at the origin.
+        """
+        com = self.center_of_mass()
+        self.coordinates -= com
 
-    # Add an additional atom to the molecule (e.g., adding an oxygen atom)
-    new_oxygen = Atom("O", 1.0, 1.0, 0.0)
-    water_molecule.add_atom(new_oxygen)
-    print("After adding another oxygen atom:")
-    print(water_molecule)
+    def reorder_atoms(self, new_order):
+        """
+        Reorder the atoms in the molecule.
 
-    # Use get_atom to fetch an atom by index
-    first_atom = water_molecule.get_atom(0)
-    print(f"First atom: {first_atom.symbol} at {first_atom.position}")
+        Parameters:
+        new_order (list): A list of indices representing the new order.
+        """
+        if sorted(new_order) != list(range(len(self.symbols))):
+            raise ValueError("new_order must be a permutation of indices 0 to N-1.")
+        self.symbols = self.symbols[new_order]
+        self.coordinates = self.coordinates[new_order]
 
-    # Use get_atoms_by_symbol to fetch all hydrogen atoms
-    hydrogen_atoms = water_molecule.get_atoms_by_symbol('H')
-    for idx, hydrogen_atom in enumerate(hydrogen_atoms, 1):
-        print(f"Hydrogen atom {idx}: {hydrogen_atom.symbol} at {hydrogen_atom.position}")
+    def distance(self, atom_index1, atom_index2):
+        """
+        Calculate the distance between two atoms.
 
-    # Remove an atom (e.g., removing the newly added oxygen)
-    water_molecule.remove_atom(new_oxygen)
-    print("After removing the added oxygen atom:")
-    print(water_molecule)
+        Parameters:
+        atom_index1 (int): Index of the first atom.
+        atom_index2 (int): Index of the second atom.
 
-    # Calculate center of mass
-    center_of_mass = water_molecule.center_of_mass()
-    print(f"Center of Mass: {center_of_mass}")
+        Returns:
+        float: The Euclidean distance between the two atoms.
+        """
+        if atom_index1 >= len(self.symbols) or atom_index2 >= len(self.symbols):
+            raise IndexError("Atom index out of range.")
+        coord1 = self.coordinates[atom_index1]
+        coord2 = self.coordinates[atom_index2]
+        return np.linalg.norm(coord1 - coord2)
 
+    def bond_angle(self, atom_index1, atom_index2, atom_index3):
+        """
+        Calculate the bond angle formed by three atoms.
 
-    # Create a molecule
-    mol = Molecule(name="Example Molecule")
+        Parameters:
+        atom_index1 (int): Index of the first atom.
+        atom_index2 (int): Index of the central atom.
+        atom_index3 (int): Index of the third atom.
 
-    # Add atoms and see the dimension update
-    mol.add_atom(Atom("H", 0.0, 0.0, 0.0))
-    print(f"Dimension after adding 1 atom: {mol.dimension}")  # Should be 1
+        Returns:
+        float: The bond angle in degrees.
+        """
+        if any(index >= len(self.symbols) for index in [atom_index1, atom_index2, atom_index3]):
+            raise IndexError("Atom index out of range.")
+        # Vectors from central atom to the two other atoms
+        vec1 = self.coordinates[atom_index1] - self.coordinates[atom_index2]
+        vec2 = self.coordinates[atom_index3] - self.coordinates[atom_index2]
+        # Normalize vectors
+        vec1_norm = vec1 / np.linalg.norm(vec1)
+        vec2_norm = vec2 / np.linalg.norm(vec2)
+        # Compute angle
+        cos_theta = np.dot(vec1_norm, vec2_norm)
+        # Clamp cos_theta to [-1, 1] to avoid numerical errors
+        cos_theta = np.clip(cos_theta, -1.0, 1.0)
+        angle = np.degrees(np.arccos(cos_theta))
+        return angle
 
-    mol.add_atom(Atom("H", 1.0, 0.0, 0.0))
-    print(f"Dimension after adding 2 atoms: {mol.dimension}")  # Should be 2 (linear)
+    def dihedral_angle(self, atom_index1, atom_index2, atom_index3, atom_index4):
+        """
+        Calculate the dihedral angle defined by four atoms.
 
-    mol.add_atom(Atom("O", 2.0, 0.000000000000001, 0.0))
-    print(f"{mol}")  # Should be 3 (3D)
-    print(f"{len(mol.atoms)}")  # Should be 3 (3D)
-    print(f"Dimension after adding 3 atoms: {mol.dimension}")  # Should be 3 (3D)
+        Parameters:
+        atom_index1 (int): Index of the first atom.
+        atom_index2 (int): Index of the second atom.
+        atom_index3 (int): Index of the third atom.
+        atom_index4 (int): Index of the fourth atom.
 
-    # Remove an atom and check the dimension
-    mol.remove_atom(mol.atoms[2])
-    print(f"Dimension after removing 1 atom: {mol.dimension}")  # Should go back to 2 (linear)
+        Returns:
+        float: The dihedral angle in degrees.
+        """
+        if any(index >= len(self.symbols) for index in [atom_index1, atom_index2, atom_index3, atom_index4]):
+            raise IndexError("Atom index out of range.")
 
+        p0 = self.coordinates[atom_index1]
+        p1 = self.coordinates[atom_index2]
+        p2 = self.coordinates[atom_index3]
+        p3 = self.coordinates[atom_index4]
 
+        b0 = -1.0 * (p1 - p0)
+        b1 = p2 - p1
+        b2 = p3 - p2
 
+        # Normalize b1 so that it does not influence magnitude of vector products
+        b1 /= np.linalg.norm(b1)
+
+        # Compute vectors normal to the planes
+        v = b0 - np.dot(b0, b1) * b1
+        w = b2 - np.dot(b2, b1) * b1
+
+        x = np.dot(v, w)
+        y = np.dot(np.cross(b1, v), w)
+
+        angle = np.degrees(np.arctan2(y, x))
+        return angle
+
+    def set_property(self, name, value):
+        """
+        Add or modify an optional property of the molecule.
+        """
+        setattr(self, name, value)
+
+    def get_property(self, name):
+        """
+        Retrieve a property of the molecule.
+        """
+        return getattr(self, name, None)
 

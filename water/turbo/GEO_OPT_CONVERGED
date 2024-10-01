@@ -1,0 +1,24 @@
+CONVERGENCY CRITERIA FULFILLED IN CYCLE 6
+
+ energy change  : actual value =  -0.5540E-07 threshold =   0.1000E-05
+ geom. gradient : actual value =   0.7525E-05 threshold =   0.1000E-02
+
+Job ended at   Mo Sep 30 18:07:26 CEST 2024
+  on machine     login.curta.zedat.fu-berlin.de
+  by user        steinerl
+  in directory   /home/steinerl/project-avatar/src/water
+  
+job.start file had been created with details about the job type: 
+
+Mo Sep 30 18:07:16 CEST 2024
+jobex WAS CALLED AS: jobex
+AN OPTIMIZATION WITH MAX. 100 CYCLES WILL BE PERFORMED
+CONVERGENCY CRITERION FOR TOTAL SCF-ENERGY IS 10**(-6)
+CONVERGENCY CRITERION FOR MAXIMUM NORM OF SCF-ENERGY GRADIENT IS 10**(-3)
+CONVERGENCY CRITERION FOR MAXIMUM NORM OF BASIS SET GRADIENT IS 10**(-3)
+PROCEDURE WILL START WITH A dscf like STEP
+LOAD MODULES WILL BE TAKEN FROM DIRECTORY /trinity/shared/easybuild/software/TURBOMOLE/7.6.1/bin/em64t-unknown-linux-gnu
+DSCF  = /trinity/shared/easybuild/software/TURBOMOLE/7.6.1/bin/em64t-unknown-linux-gnu/dscf
+GRAD  = /trinity/shared/easybuild/software/TURBOMOLE/7.6.1/bin/em64t-unknown-linux-gnu/grad
+STATPT = /trinity/shared/easybuild/software/TURBOMOLE/7.6.1/bin/em64t-unknown-linux-gnu/statpt
+

@@ -1,0 +1,137 @@
+import numpy as np
+
+# A dictionary of atomic masses for common elements
+atomic_masses = {
+    'H': 1.00784,
+    'He': 4.002602,
+    'Li': 6.94,
+    'Be': 9.01218,
+    'B': 10.81,
+    'C': 12.011,
+    'N': 14.007,
+    'O': 15.999,
+    'F': 18.998,
+    'Ne': 20.1797,
+    'Na': 22.98976928,
+    'Mg': 24.305,
+    'Al': 26.9815385,
+    'Si': 28.085,
+    'P': 30.973761998,
+    'S': 32.06,
+    'Cl': 35.45,
+    'Ar': 39.948,
+    'K': 39.0983,
+    'Ca': 40.078,
+    'Fe': 55.845,
+    'Cu': 63.546,
+    'Zn': 65.38,
+    # Add more elements as needed
+}
+
+class Molecule:
+    def __init__(self, symbols, coordinates, energy=None, frequencies=None, gas_phase=None):
+        """
+        Initialize a Molecule object.
+
+        Parameters:
+        symbols (list): List of element symbols.
+        coordinates (list of lists): 2D list of Cartesian coordinates [[x1, y1, z1], [x2, y2, z2], ...].
+        energy (float, optional): Energy of the molecule.
+        frequencies (list, optional): Vibrational frequencies.
+        gas_phase (bool, optional): Indicates if the molecule is in the gas phase.
+        """
+        self.symbols = np.array(symbols)
+        self.coordinates = np.array(coordinates)
+        self.energy = energy
+        self.frequencies = np.array(frequencies) if frequencies is not None else None
+        self.gas_phase = gas_phase
+
+        # Validate that the number of symbols matches the number of coordinate sets
+        if len(self.symbols) != len(self.coordinates):
+            raise ValueError("The number of symbols and coordinate sets must be the same.")
+
+    def center_of_mass(self):
+        """
+        Calculate and return the center of mass of the molecule.
+
+        Returns:
+        numpy.ndarray: The center of mass coordinates [x, y, z].
+        """
+        masses = np.array([atomic_masses[symbol] for symbol in self.symbols])
+        total_mass = masses.sum()
+        com = np.dot(masses, self.coordinates) / total_mass
+        return com
+
+    def moments_of_inertia(self):
+        """
+        Calculate and return the principal moments of inertia of the molecule.
+
+        Returns:
+        numpy.ndarray: The principal moments of inertia.
+        """
+        masses = np.array([atomic_masses[symbol] for symbol in self.symbols])
+        # Center the coordinates around the center of mass
+        coords = self.coordinates - self.center_of_mass()
+
+        # Initialize the inertia tensor
+        inertia_tensor = np.zeros((3, 3))
+        for i in range(len(masses)):
+            mass = masses[i]
+            x, y, z = coords[i]
+            inertia_tensor[0, 0] += mass * (y**2 + z**2)
+            inertia_tensor[1, 1] += mass * (x**2 + z**2)
+            inertia_tensor[2, 2] += mass * (x**2 + y**2)
+            inertia_tensor[0, 1] -= mass * x * y
+            inertia_tensor[0, 2] -= mass * x * z
+            inertia_tensor[1, 2] -= mass * y * z
+
+        # Complete the symmetric tensor
+        inertia_tensor[1, 0] = inertia_tensor[0, 1]
+        inertia_tensor[2, 0] = inertia_tensor[0, 2]
+        inertia_tensor[2, 1] = inertia_tensor[1, 2]
+
+        # Calculate eigenvalues (principal moments of inertia)
+        moments, _ = np.linalg.eigh(inertia_tensor)
+        return moments
+
+    def recenter(self):
+        """
+        Recenter the molecule so that its center of mass is at the origin.
+        """
+        com = self.center_of_mass()
+        self.coordinates -= com
+
+    def reorder_atoms(self, new_order):
+        """
+        Reorder the atoms in the molecule.
+
+        Parameters:
+        new_order (list): A list of indices representing the new order.
+        """
+        if sorted(new_order) != list(range(len(self.symbols))):
+            raise ValueError("new_order must be a permutation of indices 0 to N-1.")
+        self.symbols = self.symbols[new_order]
+        self.coordinates = self.coordinates[new_order]
+
+    def set_property(self, name, value):
+        """
+        Add or modify an optional property of the molecule.
+
+        Parameters:
+        name (str): The name of the property.
+        value: The value of the property.
+        """
+        setattr(self, name, value)
+
+    def get_property(self, name):
+        """
+        Retrieve a property of the molecule.
+
+        Parameters:
+        name (str): The name of the property.
+
+        Returns:
+        The value of the property.
+        """
+        return getattr(self, name, None)
+
