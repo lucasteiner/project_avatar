@@ -1,10 +1,10 @@
 import numpy as np
 from geometry import GeometryMixin
+from reorder import ReorderMixin
 from bonding import Bonding
-#from comparison import ComparisonMixin
 from atomic_masses import atomic_masses
 
-class Molecule(GeometryMixin):
+class Molecule(GeometryMixin, ReorderMixin):
     def __init__(self, symbols, coordinates, energy=None, frequencies=None, gas_phase=None):
         """
         Initialize a Molecule object.
@@ -205,5 +205,20 @@ class Molecule(GeometryMixin):
             x, y, z = coord
             lines.append(f"{symbol} {x:.6f} {y:.6f} {z:.6f}")
         return '\n'.join(lines)
+
+    def copy(self):
+        """
+        Create a deep copy of the molecule.
+    
+        Returns:
+        Molecule: A new Molecule instance that is a copy of the current molecule.
+        """
+        return Molecule(
+            symbols=np.copy(self.symbols),
+            coordinates=np.copy(self.coordinates),
+            energy=self.energy,
+            frequencies = np.copy(self.frequencies) if self.frequencies is not None else None,
+            gas_phase=self.gas_phase,
+        )
 
 

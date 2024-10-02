@@ -374,6 +374,44 @@ def test_apply_hungarian():
     assert np.all(molecule.symbols == expected_symbols)
     np.testing.assert_array_equal(molecule.coordinates, np.array(expected_coordinates))
 
+def test_copy_method():
+    # Create a test molecule
+    symbols = np.array(['O', 'H', 'H'])
+    coordinates = np.array([
+        [0.0, 0.0, 0.0],  # Oxygen
+        [1.0, 0.0, 0.0],  # Hydrogen 1
+        [0.0, 1.0, 0.0]   # Hydrogen 2
+    ])
+    energy = -75.0
+    frequencies = np.array([1000, 1500, 2000])
+    gas_phase = True
+
+    original_molecule = Molecule(symbols=symbols, coordinates=coordinates, energy=energy, frequencies=frequencies, gas_phase=gas_phase)
+
+    # Create a copy of the molecule
+    copied_molecule = original_molecule.copy()
+
+    # Assert that the copied molecule has the same properties as the original
+    np.testing.assert_array_equal(copied_molecule.symbols, original_molecule.symbols)
+    np.testing.assert_array_equal(copied_molecule.coordinates, original_molecule.coordinates)
+    np.testing.assert_array_equal(copied_molecule.frequencies, original_molecule.frequencies)
+    assert copied_molecule.energy == original_molecule.energy
+    assert copied_molecule.gas_phase == original_molecule.gas_phase
+
+    # Modify the copy and ensure the original molecule is not affected
+    copied_molecule.symbols[0] = 'C'
+    copied_molecule.coordinates[0] = [2.0, 2.0, 2.0]
+    copied_molecule.frequencies[0] = 3000
+    copied_molecule.energy = -74.0
+    copied_molecule.gas_phase = False
+
+    # Ensure the original molecule remains unchanged
+    assert original_molecule.symbols[0] == 'O'
+    np.testing.assert_array_equal(original_molecule.coordinates[0], [0.0, 0.0, 0.0])
+    assert original_molecule.frequencies[0] == 1000
+    assert original_molecule.energy == -75.0
+    assert original_molecule.gas_phase == True
+
 
 if __name__ == "__main__":
     pytest.main()

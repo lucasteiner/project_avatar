@@ -116,7 +116,7 @@ def test_recenter():
     ]
     molecule = Molecule(symbols, coordinates)
     original_com = molecule.center_of_mass()
-    molecule.recenter()
+    molecule.coordinates = molecule.recenter()
     com = molecule.center_of_mass()
     expected_com = np.array([0.0, 0.0, 0.0])
     assert np.allclose(com, expected_com, atol=1e-3), "Center of mass should be at the origin after recentering"

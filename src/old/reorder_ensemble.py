@@ -4,72 +4,6 @@ from scipy.spatial.distance import cdist
 from scipy.optimize import linear_sum_assignment
 import argparse
 
-def kabsch(P, Q):
-    """
-    Implements the Kabsch algorithm to find the optimal rotation matrix that minimizes RMSD.
-
-    Parameters:
-    P (numpy.ndarray): First set of points.
-    Q (numpy.ndarray): Second set of points.
-
-    Returns:
-    numpy.ndarray: The optimal rotation matrix.
-    """
-    C = np.dot(np.transpose(P), Q)
-    V, S, W = np.linalg.svd(C)
-    if (np.linalg.det(V) * np.linalg.det(W)) < 0.0:
-        V[:, -1] = -V[:, -1]
-    return np.dot(V, W)
-
-def reorder_by_centroid(atoms):
-    """
-    Reorders atoms by their distance from the centroid.
-
-    Parameters:
-    atoms (list): A list of atoms and their coordinates.
-
-    Returns:
-    tuple: A tuple of the reordered atoms and their original indices.
-    """
-    coords = np.array([atom[1] for atom in atoms])
-    centroid = np.mean(coords, axis=0)
-    distances = np.linalg.norm(coords - centroid, axis=1)
-    sorted_indices = np.argsort(distances)
-    return [atoms[i] for i in sorted_indices], sorted_indices
-
-
-def reorder_atoms_hungarian(reference_atoms, target_atoms):
-    """
-    Reorders atoms using the Hungarian algorithm based on minimal distance.
-
-    Parameters:
-    reference_atoms (list): A list of atoms from the reference structure.
-    target_atoms (list): A list of atoms from the target structure.
-
-    Returns:
-    tuple: A tuple of reordered target atoms and the order indices.
-    """
-    ref_coords = np.array([atom[1] for atom in reference_atoms])
-    target_coords = np.array([atom[1] for atom in target_atoms])
-    cost_matrix = cdist(ref_coords, target_coords)
-    row_ind, col_ind = linear_sum_assignment(cost_matrix)
-    return [target_atoms[i] for i in col_ind], col_ind
-
-
-def invert_positions(arr):
-    """
-    Inverts the positions of an array (i.e., mapping index to its position).
-
-    Parameters:
-    arr (numpy.ndarray): The array to invert.
-
-    Returns:
-    numpy.ndarray: The inverted array.
-    """
-    inverted_array = np.zeros_like(arr, dtype=int)
-    inverted_array[arr] = np.arange(len(arr))
-    return inverted_array
-
 def is_duplicate(atoms, ref_atoms):
     """
     Finds the best atom sort order based on RMSD between reference and target molecule.
@@ -162,38 +96,6 @@ def find_best_sort_order_ensemble(ensemble_molecules, reference_molecules):
                 return reordered_atoms, combined_order, ref_energy, energy
 
     return None, None, None, None
-
-
-def reorder_molecule(molecule, combined_order):
-    """
-    Reorders the atoms of a molecule based on a given sort order.
-
-    Parameters:
-    molecule (tuple): A tuple containing the energy and atom list of the molecule.
-    combined_order (numpy.ndarray): The atom reorder indices.
-
-    Returns:
-    tuple: The reordered molecule.
-    """
-    _, atoms = molecule
-    reordered_atoms = [atoms[i] for i in combined_order]
-    return molecule[0], reordered_atoms
-
-
-def write_xyz(filename, molecules):
-    """
-    Writes the reordered molecular structures to an XYZ file.
-
-    Parameters:
-    filename (str): The output filename.
-    molecules (list): A list of reordered molecules.
-    """
-    with open(filename, 'w') as file:
-        for energy, atoms in molecules:
-            file.write(f"{len(atoms)}\n")
-            file.write(f"{energy}\n")
-            for atom in atoms:
-                file.write(f"{atom[0]} {atom[1][0]:.6f} {atom[1][1]:.6f} {atom[1][2]:.6f}\n")
 
 
 def main():
