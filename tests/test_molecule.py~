@@ -32,7 +32,6 @@ def test_center_of_mass():
     com = molecule.center_of_mass()
     # Manually calculated center of mass
     atomic_masses = {
-        'H': 1.007841,
         'H': 1.00784,
         'O': 15.9994
     }
@@ -137,7 +136,7 @@ def test_reorder_atoms():
     ]
     molecule = Molecule(symbols, coordinates)
     new_order = [1, 2, 0]  # Move O to the end
-    molecule.reorder_atoms(new_order)
+    molecule.symbols, molecule.coordinates = molecule.reorder_atoms(new_order)
     expected_symbols = ['H', 'H', 'O']
     expected_coordinates = [
         [0.7586762, 0.5948624, 0.0],
@@ -216,6 +215,165 @@ def test_invalid_reorder_atoms():
     new_order = [0, 1]  # Incorrect length
     with pytest.raises(ValueError, match="new_order must be a permutation of indices 0 to N-1."):
         molecule.reorder_atoms(new_order)
+
+def test_kabsch_align():
+    """
+    Test the kabsch_rotate method to ensure that it modifies the coordinates
+    of the molecule correctly by aligning it with another molecule.
+    """
+    symbols = ['O', 'H', 'H']
+    coordinates1 = [
+        [0.0000000, -0.0177249, 0.0000000],  # O
+        [0.7586762, 0.5948624, 0.0000000],   # H1
+        [-0.7586762, 0.5948624, 0.0000000]   # H2
+    ]
+    coordinates2 = [
+        [0.0000000, -0.0170000, 0.0000000],  # O (slightly different)
+        [0.7590000, 0.5940000, 0.0000000],   # H1 (slightly different)
+        [-0.7590000, 0.5940000, 0.0000000]   # H2 (slightly different)
+    ]
+
+    molecule1 = Molecule(symbols, coordinates1)
+    molecule2 = Molecule(symbols, coordinates2)
+
+    # Perform Kabsch rotation to align molecule1 to molecule2
+    molecule1.coordinates, rotation_matrix = molecule1.kabsch_align(molecule2)
+
+    # Calculate the RMSD after alignment
+    rmsd_value = molecule1.calculate_rmsd(molecule2)
+
+    # Ensure the RMSD is very small after rotation
+    assert rmsd_value < 1e-1, "RMSD should be close to zero after Kabsch alignment and rotation"
+
+    # Ensure that the coordinates have been modified (not the original ones)
+    assert not np.allclose(molecule1.coordinates, coordinates1, atol=1e-6), \
+        "The coordinates of molecule1 should have changed after apply_kabsch"
+
+def test_kabsch_align2():
+    """
+    Test the Kabsch algorithm to align two molecules.
+    """
+    symbols1 = ['H', 'H', 'O']
+    coordinates1 = [
+        [0.0,  0.5,  0.5],  # H
+        [0.0,  0.5, -0.5],  # H
+        [0.0,  0.0,  0.0],      # O
+    ]
+
+    symbols2 = ['H', 'H', 'O']
+    coordinates2 = [
+        [0.0,  0.5,-0.5],  # H(shifted version of coordinates1)
+        [0.0,  0.5, 0.5],  # H
+        [0.0,  0.0, 0.0],  # O
+    ]
+
+    molecule1 = Molecule(symbols1, coordinates1)
+    molecule2 = Molecule(symbols2, coordinates2)
+
+    aligned_coords, rotation_matrix = molecule1.kabsch_align(molecule2)
+
+    # Check that the aligned coordinates are close to molecule2's coordinates
+    assert np.allclose(aligned_coords, molecule2.coordinates, atol=1e-1), \
+        "Aligned coordinates do not match expected values."
+
+    # Check that the rotation matrix is valid (orthogonal matrix)
+    assert np.allclose(np.dot(rotation_matrix, rotation_matrix.T), np.eye(3), atol=1e-6), \
+        "Rotation matrix is not orthogonal."
+
+def test_calculate_rmsd():
+    """
+    Test the RMSD calculation between two molecules.
+    """
+    symbols1 = ['H', 'O', 'H']
+    coordinates1 = [
+        [0.0, 0.757, 0.586],  # H
+        [0.0, 0.0, 0.0],      # O
+        [0.0, -0.757, 0.586]  # H
+    ]
+
+    symbols2 = ['H', 'O', 'H']
+    coordinates2 = [
+        [0.0, 0.757, 0.586],  # H (same as coordinates1)
+        [0.0, 0.0, 0.0],      # O
+        [0.0, -0.757, 0.586]  # H
+    ]
+
+    molecule1 = Molecule(symbols1, coordinates1)
+    molecule2 = Molecule(symbols2, coordinates2)
+
+    rmsd_value = molecule1.calculate_rmsd(molecule2)
+
+    # Since the molecules are identical, the RMSD should be close to zero
+    assert np.isclose(rmsd_value, 0.0, atol=1e-1), "RMSD should be close to zero for identical molecules."
+
+def test_get_coordinates_by_symbol():
+    # Define symbols and coordinates for a water molecule (H2O)
+    symbols = ['H', 'O', 'H']
+    coordinates = [
+        [0.0, 0.0, 0.0],  # H
+        [0.0, 0.0, 1.0],  # O
+        [1.0, 0.0, 0.0],  # H
+    ]
+    
+    molecule = Molecule(symbols, coordinates)
+    
+    # Test for hydrogen atoms ('H')
+    hydrogen_coords = molecule.get_coordinates_by_symbol('H')
+    expected_hydrogen_coords = [np.array([0.0, 0.0, 0.0]), np.array([1.0, 0.0, 0.0])]
+    
+    assert len(hydrogen_coords) == 2
+    for coord, expected in zip(hydrogen_coords, expected_hydrogen_coords):
+        np.testing.assert_array_equal(coord, expected)
+    
+    # Test for oxygen atom ('O')
+    oxygen_coords = molecule.get_coordinates_by_symbol('O')
+    expected_oxygen_coords = [np.array([0.0, 0.0, 1.0])]
+    
+    assert len(oxygen_coords) == 1
+    np.testing.assert_array_equal(oxygen_coords[0], expected_oxygen_coords[0])
+    
+    # Test for an element not present ('C' for carbon)
+    carbon_coords = molecule.get_coordinates_by_symbol('C')
+    assert len(carbon_coords) == 0  # Should return an empty list
+
+def test_apply_hungarian():
+    # Create a test molecule with symbols and coordinates
+    symbols = ['O', 'H', 'H']
+    coordinates = [
+        [1.0, 0.0, 0.0],  # Oxygen
+        [0.0, 1.0, 0.0],  # Hydrogen 1
+        [0.0, -1.0, 0.0]  # Hydrogen 2
+    ]
+    molecule = Molecule(symbols, coordinates)
+    
+    # Create another molecule for comparison (same atoms, different order)
+    other_symbols = ['H', 'O', 'H']
+    other_coordinates = [
+        [0.0, 1.0, 0.0],  # Hydrogen 1
+        [1.0, 0.0, 0.0],  # Oxygen
+        [0.0, -1.0, 0.0]  # Hydrogen 2
+    ]
+    other_molecule = Molecule(other_symbols, other_coordinates)
+    
+    # Get the Hungarian reorder indices
+    (molecule.symbols, molecule.coordinates, reorder_indices) = molecule.hungarian_reorder(other_molecule)
+    print(reorder_indices)
+    
+    ## Apply the Hungarian reordering to the test molecule
+    #molecule.apply_hungarian(reorder_indices)
+    
+    # Expected result after reordering (should match the other molecule)
+    expected_symbols = np.array(['H', 'O', 'H'])
+    expected_coordinates = np.array([
+        [0.0, 1.0, 0.0],  # Hydrogen 1
+        [1.0, 0.0, 0.0],  # Oxygen
+        [0.0, -1.0, 0.0]  # Hydrogen 2
+    ])
+    
+    # Assert that the symbols and coordinates are correctly reordered
+    assert np.all(molecule.symbols == expected_symbols)
+    np.testing.assert_array_equal(molecule.coordinates, np.array(expected_coordinates))
+
 
 if __name__ == "__main__":
     pytest.main()

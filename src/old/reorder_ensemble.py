@@ -4,73 +4,6 @@ from scipy.spatial.distance import cdist
 from scipy.optimize import linear_sum_assignment
 import argparse
 
-def parse_xyz(filename):
-    """
-    Parses an XYZ file and returns a list of molecular structures.
-
-    Parameters:
-    filename (str): The path to the XYZ file.
-
-    Returns:
-    list: A list of tuples, where each tuple contains the energy of the structure
-          and a list of atoms with their coordinates.
-    """
-    with open(filename, 'r') as file:
-        lines = file.readlines()
-
-    molecules = []
-    i = 0
-    while i < len(lines):
-        natoms = int(lines[i].strip())
-        energy = float(lines[i + 1].strip().split()[0])
-        atoms = [
-            (parts[0], np.array([float(parts[1]), float(parts[2]), float(parts[3])]))
-            for parts in (lines[i + 2 + j].split() for j in range(natoms))
-        ]
-        molecules.append((energy, atoms))
-        i += 2 + natoms
-    return molecules
-
-
-def calculate_moments_of_inertia(atoms):
-    """
-    Calculates the moments of inertia for a set of atoms.
-
-    Parameters:
-    atoms (list): A list of atoms and their coordinates.
-
-    Returns:
-    numpy.ndarray: The moment of inertia tensor.
-    """
-    coords = np.array([atom[1] for atom in atoms])
-    masses = np.array([12.0 if atom[0] == 'C' else 14.0 if atom[0] == 'N'
-                       else 16.0 if atom[0] == 'O' else 1.0 if atom[0] == 'H' else 32.0 for atom in atoms])
-    center_of_mass = np.sum(masses[:, np.newaxis] * coords, axis=0) / np.sum(masses)
-    coords -= center_of_mass
-
-    Ixx = np.sum(masses * (coords[:, 1]**2 + coords[:, 2]**2))
-    Iyy = np.sum(masses * (coords[:, 0]**2 + coords[:, 2]**2))
-    Izz = np.sum(masses * (coords[:, 0]**2 + coords[:, 1]**2))
-    Ixy = -np.sum(masses * coords[:, 0] * coords[:, 1])
-    Ixz = -np.sum(masses * coords[:, 0] * coords[:, 2])
-    Iyz = -np.sum(masses * coords[:, 1] * coords[:, 2])
-    return np.array([[Ixx, Ixy, Ixz], [Ixy, Iyy, Iyz], [Ixz, Iyz, Izz]])
-
-
-def calculate_rmsd(V, W):
-    """
-    Calculates the root mean square deviation (RMSD) between two sets of points.
-
-    Parameters:
-    V (numpy.ndarray): First set of coordinates.
-    W (numpy.ndarray): Second set of coordinates.
-
-    Returns:
-    float: The RMSD value.
-    """
-    return np.sqrt(np.mean(np.sum((V - W)**2, axis=1)))
-
-
 def kabsch(P, Q):
     """
     Implements the Kabsch algorithm to find the optimal rotation matrix that minimizes RMSD.
@@ -87,7 +20,6 @@ def kabsch(P, Q):
     if (np.linalg.det(V) * np.linalg.det(W)) < 0.0:
         V[:, -1] = -V[:, -1]
     return np.dot(V, W)
-
 
 def reorder_by_centroid(atoms):
     """

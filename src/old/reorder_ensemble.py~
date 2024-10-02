@@ -200,7 +200,7 @@ def find_best_sort_order_ensemble(ensemble_molecules, reference_molecules):
         ref_moi = calculate_moments_of_inertia(ref_atoms)
 
         for energy, atoms in ensemble_molecules:
-            if abs(energy - ref_energy) > 1e-3:
+            if abs(energy - ref_energy) > 2e-3:
                 continue
 
             target_moi = calculate_moments_of_inertia(atoms)

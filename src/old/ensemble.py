@@ -83,7 +83,7 @@ class Ensemble:
 #            i += 2 + natoms  # Move to the next molecule block
 #
 #        return molecules
-
+ 
 
 #    @classmethod
 #    def from_dataframe(cls, df, element_column_str='Elements', xyz_column_str='xyz Coordinates'):

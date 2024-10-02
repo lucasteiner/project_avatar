@@ -4,7 +4,7 @@ import numpy as np
 import scipy.constants as const
 
 # Physical constants
-TOLERANCE = 0.5  # Tolerance for comparing floating-point numbers
+TOLERANCE = 0.1  # Tolerance for comparing floating-point numbers
 
 def test_water_molecule_properties():
     # Data for water molecule
@@ -41,7 +41,7 @@ def test_water_molecule_properties():
 
     # Calculate zero-point energy
     zpe = water.zero_point_energy()
-    assert abs(zpe - expected_zpe) < TOLERANCE, f"ZPE: Expected {expected_zpe}, got {zpe}"
+    assert abs(zpe - expected_zpe) < 0.5, f"ZPE: Expected {expected_zpe}, got {zpe}"
 
     # Calculate thermodynamic properties
     thermo_props = water.thermodynamic_properties(temperature)
@@ -63,7 +63,7 @@ def test_water_molecule_properties():
 
     # Compare Gibbs free energy
     gibbs_free_energy = thermo_props['Gibbs free energy']
-    assert abs(gibbs_free_energy - expected_gibbs_free_energy) < TOLERANCE, \
+    assert abs(gibbs_free_energy - expected_gibbs_free_energy) < 0.3, \
         f"Gibbs Free Energy: Expected {expected_gibbs_free_energy}, got {gibbs_free_energy}"
 
 def test_vibrational_entropy_water():
