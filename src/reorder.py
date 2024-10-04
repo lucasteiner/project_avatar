@@ -207,67 +207,6 @@ class ReorderMixin:
         inverted_array[arr] = np.arange(len(arr))
         return inverted_array
 
-    def reorder_after(self, reference_molecule):
-        """
-        Reorder this molecule after another molecule by following these steps:
-        1. Create copies of both molecules.
-        2. Reorder by centroid for both the molecule and the reference molecule.
-        3. Align using the Kabsch algorithm.
-        4. Reorder by the Hungarian algorithm.
-        5. Align again using the Kabsch algorithm.
-    
-        Parameters:
-        reference_molecule (Molecule): The reference molecule to reorder after.
-    
-        Returns:
-        tuple: The final reordered coordinates and the final sort order.
-        """
-        # Step 1: Create copies of both molecules
-        target_copy = self.copy()
-        reference_copy = reference_molecule.copy()
-    
-        # Step 2: Reorder by centroid (on both the target and reference)
-        target_symbols, target_coords, target_centroid_order = target_copy.reorder_by_centroid()
-        reference_symbols, reference_coords, reference_centroid_order = reference_copy.reorder_by_centroid()
-    
-        # Apply the centroid sorting to both molecules
-        target_copy.symbols = target_symbols
-        target_copy.coordinates = target_coords
-        reference_copy.symbols = reference_symbols
-        reference_copy.coordinates = reference_coords
-    
-        # Step 3: Perform Kabsch alignment
-        aligned_coords, _ = target_copy.kabsch_align(reference_copy)
-    
-        # Update the target coordinates with the aligned ones
-        target_copy.coordinates = aligned_coords
-    
-        # Step 4: Reorder using Hungarian algorithm
-        reordered_symbols_hungarian, reordered_coords_hungarian, hungarian_order = target_copy.hungarian_reorder(reference_copy)
-    
-        # Apply the Hungarian reordering
-        target_copy.symbols = reordered_symbols_hungarian
-        target_copy.coordinates = reordered_coords_hungarian
-    
-        # Step 5: Perform another Kabsch alignment
-        final_aligned_coords, _ = target_copy.kabsch_align(reference_copy)
-    
-        # Update the final coordinates
-        target_copy.coordinates = final_aligned_coords
-    
-        # Step 6: Combine the sorting orders
-        # First, invert the reference centroid order
-        inverted_reference_centroid_order = target_copy.invert_positions(reference_centroid_order)
-    
-        # Combine the centroid and Hungarian sorting orders
-        combined_order = target_centroid_order[hungarian_order][inverted_reference_centroid_order]
-        # combined_order = sort_indices[hungarian_indices[invert_positions(ref_sort_indices)]]
-        target_copy.coordinates = self.coordinates[combined_order]
-        final_coordinates,  _ = target_copy.kabsch_align(reference_molecule)
-    
-        #return target_copy.coordinates, combined_order
-        return final_coordinates, combined_order
-
     def get_transformed_coordinates(self, rotation, translation):
         """
         Get a new set of coordinates after applying rotation and translation,
@@ -292,12 +231,12 @@ class ReorderMixin:
         """
         self.coordinates = (rotation @ self.coordinates.T).T + translation
 
-    def icp(self, target, max_iterations=100, tolerance=1e-5):
+    def icp(self, reference, max_iterations=100, tolerance=1e-5):
         """
-        Perform the Iterative Closest Point algorithm to align this molecule to the target molecule.
+        Perform the Iterative Closest Point algorithm to align this molecule to the reference molecule.
 
         Parameters:
-        - target (Molecule): The target molecule to align to.
+        - reference (Molecule): The reference molecule to align to.
         - max_iterations (int): Maximum number of ICP iterations.
         - tolerance (float): Convergence threshold based on change in error.
 
@@ -308,7 +247,7 @@ class ReorderMixin:
         """
         # Make copies to avoid modifying the original molecules
         source_coords = self.coordinates.copy()
-        target_coords = target.coordinates.copy()
+        reference_coords = reference.coordinates.copy()
 
         # Initialize cumulative rotation and translation
         final_rotation = np.eye(3)
@@ -317,11 +256,11 @@ class ReorderMixin:
         errors = []
 
         for i in range(max_iterations):
-            # Step 1: Find the closest points in target for each source point, considering symbols
-            closest_target = self._find_closest_points(source_coords, target_coords, target.symbols)
+            # Step 1: Find the closest points in reference for each source point, considering symbols
+            closest_reference = self._find_closest_points(source_coords, reference_coords, reference.symbols)
 
             # Step 2: Compute the optimal rotation and translation
-            R, t = self._compute_optimal_transform(source_coords, closest_target)
+            R, t = self._compute_optimal_transform(source_coords, closest_reference)
 
             # Step 3: Apply the transformation
             source_coords = (R @ source_coords.T).T + t
@@ -331,7 +270,7 @@ class ReorderMixin:
             final_translation = R @ final_translation + t
 
             # Step 4: Compute mean squared error
-            mse = np.mean(np.linalg.norm(source_coords - closest_target, axis=1) ** 2)
+            mse = np.mean(np.linalg.norm(source_coords - closest_reference, axis=1) ** 2)
             errors.append(mse)
 
             # Check for convergence
@@ -346,49 +285,50 @@ class ReorderMixin:
 
         return final_coords, final_rotation, final_translation, errors
 
-    def _find_closest_points(self, source, target, target_symbols):
+
+    def _find_closest_points(self, source, reference, reference_symbols):
         """
-        Find the closest points in the target for each point in the source, considering atomic symbols.
+        Find the closest points in the reference for each point in the source, considering atomic symbols.
 
         Parameters:
         - source (np.ndarray): Source coordinates of shape (N, 3).
-        - target (np.ndarray): Target coordinates of shape (M, 3).
-        - target_symbols (np.ndarray): Array of atomic symbols in the target molecule.
+        - reference (np.ndarray): Target coordinates of shape (M, 3).
+        - reference_symbols (np.ndarray): Array of atomic symbols in the reference molecule.
 
         Returns:
-        - closest (np.ndarray): Closest target coordinates for each source point.
+        - closest (np.ndarray): Closest reference coordinates for each source point.
         """
         closest = np.zeros_like(source)
-        used_target_indices = set()
+        used_reference_indices = set()
 
         for i, (symbol, coord) in enumerate(zip(self.symbols, source)):
-            # Find all target indices with the same symbol
-            possible_indices = np.where(target_symbols == symbol)[0]
+            # Find all reference indices with the same symbol
+            possible_indices = np.where(reference_symbols == symbol)[0]
 
-            # Exclude already matched target indices
-            available_indices = [idx for idx in possible_indices if idx not in used_target_indices]
+            # Exclude already matched reference indices
+            available_indices = [idx for idx in possible_indices if idx not in used_reference_indices]
 
             if not available_indices:
-                raise ValueError(f"No available target atoms for symbol '{symbol}'.")
+                raise ValueError(f"No available reference atoms for symbol '{symbol}'.")
 
-            # Compute distances to available target atoms
-            distances = np.linalg.norm(target[available_indices] - coord, axis=1)
+            # Compute distances to available reference atoms
+            distances = np.linalg.norm(reference[available_indices] - coord, axis=1)
 
-            # Find the closest available target atom
+            # Find the closest available reference atom
             min_idx = np.argmin(distances)
-            closest_target_idx = available_indices[min_idx]
-            closest[i] = target[closest_target_idx]
-            used_target_indices.add(closest_target_idx)
+            closest_reference_idx = available_indices[min_idx]
+            closest[i] = reference[closest_reference_idx]
+            used_reference_indices.add(closest_reference_idx)
 
         return closest
 
-    def _compute_optimal_transform(self, source, target):
+    def _compute_optimal_transform(self, source, reference):
         """
-        Compute the optimal rotation and translation to align source to target.
+        Compute the optimal rotation and translation to align source to reference.
 
         Parameters:
         - source (np.ndarray): Source coordinates of shape (N, 3).
-        - target (np.ndarray): Target coordinates of shape (N, 3).
+        - reference (np.ndarray): Target coordinates of shape (N, 3).
 
         Returns:
         - R (np.ndarray): Optimal rotation matrix.
@@ -396,14 +336,14 @@ class ReorderMixin:
         """
         # Compute centroids
         centroid_source = np.mean(source, axis=0)
-        centroid_target = np.mean(target, axis=0)
+        centroid_reference = np.mean(reference, axis=0)
 
         # Center the points
         source_centered = source - centroid_source
-        target_centered = target - centroid_target
+        reference_centered = reference - centroid_reference
 
         # Compute covariance matrix
-        H = source_centered.T @ target_centered
+        H = source_centered.T @ reference_centered
 
         # Singular Value Decomposition
         U, S, Vt = np.linalg.svd(H)
@@ -415,7 +355,84 @@ class ReorderMixin:
             R = Vt.T @ U.T
 
         # Compute translation
-        t = centroid_target - R @ centroid_source
+        t = centroid_reference - R @ centroid_source
 
         return R, t
+
+    def reorder_after(self, reference_molecule):
+        """
+        Reorder this molecule after another molecule by following these steps:
+        1. Create copies of both molecules.
+        2. Reorder by centroid for both the molecule and the reference molecule.
+        3. Align using the Kabsch algorithm.
+        4. Reorder by the Hungarian algorithm.
+        5. Align again using the Kabsch algorithm.
+    
+        Parameters:
+        reference_molecule (Molecule): The reference molecule to reorder after.
+    
+        Returns:
+        tuple: The final reordered coordinates and the final sort order.
+        """
+        # Step 1: Create copies of both molecules
+        source_copy = self.copy()
+        reference_copy = reference_molecule.copy()
+    
+        # Step 2: Reorder by centroid (on both the source and reference)
+        source_symbols, source_coords, source_centroid_order = source_copy.reorder_by_centroid()
+        reference_symbols, reference_coords, reference_centroid_order = reference_copy.reorder_by_centroid()
+    
+        # Apply the centroid sorting to both molecules
+        source_copy.symbols = source_symbols
+        source_copy.coordinates = source_coords
+        reference_copy.symbols = reference_symbols
+        reference_copy.coordinates = reference_coords
+    
+        # Step 3: Perform Kabsch alignment
+        aligned_coords, _ = source_copy.kabsch_align(reference_copy)
+    
+        # Update the source coordinates with the aligned ones
+        source_copy.coordinates = aligned_coords
+    
+        # Step 4: Reorder using Hungarian algorithm
+        reordered_symbols_hungarian, reordered_coords_hungarian, hungarian_order = source_copy.hungarian_reorder(reference_copy)
+    
+        # Apply the Hungarian reordering
+        source_copy.symbols = reordered_symbols_hungarian
+        source_copy.coordinates = reordered_coords_hungarian
+    
+        # Step 5: Perform another Kabsch alignment
+        final_aligned_coords, _ = source_copy.kabsch_align(reference_copy)
+
+        # Step 5: Perform an ICP alignment
+        final_aligned_coords, _, _, error = source_copy.icp(reference_copy)
+        #final_aligned_coords, _, _, error = reference_copy.icp(source_copy)
+        #print(error)
+        #print('asdf', source_copy.calculate_rmsd(reference_copy))
+    
+        # Update the final coordinates
+        source_copy.coordinates = final_aligned_coords
+        #print(error)
+        #print('asdf', source_copy.calculate_rmsd(reference_copy))
+        #print(source_copy.calculate_rmsd(reference_copy))
+        print(source_copy.calculate_rmsd(reference_copy))
+        #assert False
+    
+        # Step 6: Combine the sorting orders
+        # First, invert the reference centroid order
+        inverted_reference_centroid_order = source_copy.invert_positions(reference_centroid_order)
+    
+        # Combine the centroid and Hungarian sorting orders
+        combined_order = source_centroid_order[hungarian_order][inverted_reference_centroid_order]
+        # combined_order = sort_indices[hungarian_indices[invert_positions(ref_sort_indices)]]
+        source_copy.coordinates = self.coordinates[combined_order]
+        source_copy.symbols = self.symbols[combined_order]
+        source_copy.coordinates,  _ = source_copy.kabsch_align(reference_molecule)
+        source_copy.coordinates,  _, _, _ = source_copy.icp(reference_molecule) # optimizes rmsd
+    
+        final_symbols = source_copy.symbols
+        final_coordinates = source_copy.coordinates
+        #return source_copy.coordinates, combined_order
+        return final_coordinates, final_symbols, combined_order
+
 

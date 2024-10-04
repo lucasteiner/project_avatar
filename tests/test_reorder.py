@@ -59,7 +59,7 @@ def test_compare_molecule(molecule1, molecule2):
     result = molecule1.compare_molecule(molecule2, tolerance_inertia=0.05, tolerance_energy=0.2, rmsd_threshold=0.15)
     assert result == (True, True, True), "All comparisons should pass within given tolerances."
 
-def test_reorder_after():
+def test_reorder_after2():
     # Create two example molecules for testing
     # Reference molecule: A linear molecule (like H2O but extended)
     reference_symbols = ["O", "H", "H"]
@@ -74,14 +74,14 @@ def test_reorder_after():
     target_molecule = Molecule(target_symbols, target_coords)
 
     # Call the reorder_after method
-    final_coords, combined_order = target_molecule.reorder_after(reference_molecule)
+    final_coords, final_symbols, combined_order = target_molecule.reorder_after(reference_molecule)
 
     # Expected final coordinates after alignment should closely match the reference molecule
     expected_final_coords = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [-1.0, 0.0, 0.0]])
 
     # Check if the final coordinates are close to the expected coordinates
     assert np.allclose(final_coords, expected_final_coords, atol=1e-2), \
-        f"Expected {expected_final_coords}, but got {final_coords}"
+        f"Difference of coordinates {expected_final_coords-final_coords}"
 
     # Check if the combined order correctly reordered the elements
     expected_order = np.array([0, 1, 2])  # Since they should be in the same order
@@ -96,18 +96,19 @@ def test_reorder_after(cc_alpha, cc_beta):
     reference_molecule = cc_beta
 
     # Call the reorder_after method
-    final_coords, combined_order = target_molecule.reorder_after(reference_molecule)
+    final_coords, final_symbols, combined_order = target_molecule.reorder_after(reference_molecule)
 
     # Expected final coordinates after alignment should closely match the reference molecule
     expected_final_coords = reference_molecule.coordinates
 
-    # Check if the final coordinates are close to the expected coordinates
-    assert np.allclose(final_coords, expected_final_coords, atol=1e-0), \
-        f"Difference of coordinates {expected_final_coords-final_coords}"
-
     expected_order = reference_molecule.symbols  # Since they should be in the same order
-    assert np.array_equal(target_molecule.symbols[combined_order], expected_order), \
-        f"Expected order {expected_order}, but got {combined_order}"
+    print(final_symbols, expected_order)
+    assert np.array_equal(final_symbols, expected_order), \
+        f"Expected order {expected_order}, but got {final_symbols}"
+
+    # Check if the final coordinates are close to the expected coordinates
+    assert np.allclose(final_coords, expected_final_coords, atol=1e-1), \
+        f"Difference of coordinates {expected_final_coords-final_coords}"
 
 def create_rotation_matrix(axis, theta):
     """
