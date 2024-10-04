@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 from scipy.spatial.distance import cdist
+from scipy.spatial import cKDTree
 
 class ReorderMixin:
    
@@ -266,4 +267,155 @@ class ReorderMixin:
     
         #return target_copy.coordinates, combined_order
         return final_coordinates, combined_order
+
+    def get_transformed_coordinates(self, rotation, translation):
+        """
+        Get a new set of coordinates after applying rotation and translation,
+        without modifying the original coordinates.
+
+        Parameters:
+        - rotation (np.ndarray): 3x3 rotation matrix.
+        - translation (np.ndarray): Translation vector of shape (3,).
+
+        Returns:
+        - new_coordinates (np.ndarray): Transformed coordinates.
+        """
+        return (rotation @ self.coordinates.T).T + translation
     
+    def apply_transformation(self, rotation, translation):
+        """
+        Apply rotation and translation to the molecule's coordinates.
+
+        Parameters:
+        - rotation (np.ndarray): 3x3 rotation matrix.
+        - translation (np.ndarray): Translation vector of shape (3,).
+        """
+        self.coordinates = (rotation @ self.coordinates.T).T + translation
+
+    def icp(self, target, max_iterations=100, tolerance=1e-5):
+        """
+        Perform the Iterative Closest Point algorithm to align this molecule to the target molecule.
+
+        Parameters:
+        - target (Molecule): The target molecule to align to.
+        - max_iterations (int): Maximum number of ICP iterations.
+        - tolerance (float): Convergence threshold based on change in error.
+
+        Returns:
+        - final_rotation (np.ndarray): The cumulative rotation matrix.
+        - final_translation (np.ndarray): The cumulative translation vector.
+        - errors (list): List of mean squared errors at each iteration.
+        """
+        # Make copies to avoid modifying the original molecules
+        source_coords = self.coordinates.copy()
+        target_coords = target.coordinates.copy()
+
+        # Initialize cumulative rotation and translation
+        final_rotation = np.eye(3)
+        final_translation = np.zeros(3)
+
+        errors = []
+
+        for i in range(max_iterations):
+            # Step 1: Find the closest points in target for each source point, considering symbols
+            closest_target = self._find_closest_points(source_coords, target_coords, target.symbols)
+
+            # Step 2: Compute the optimal rotation and translation
+            R, t = self._compute_optimal_transform(source_coords, closest_target)
+
+            # Step 3: Apply the transformation
+            source_coords = (R @ source_coords.T).T + t
+
+            # Update cumulative transformation
+            final_rotation = R @ final_rotation
+            final_translation = R @ final_translation + t
+
+            # Step 4: Compute mean squared error
+            mse = np.mean(np.linalg.norm(source_coords - closest_target, axis=1) ** 2)
+            errors.append(mse)
+
+            # Check for convergence
+            if i > 0 and abs(errors[-2] - errors[-1]) < tolerance:
+                print(f"ICP converged after {i+1} iterations.")
+                break
+        else:
+            print(f"ICP did not converge after {max_iterations} iterations.")
+
+        # Apply the final transformation to the molecule
+        final_coords = self.get_transformed_coordinates(final_rotation, final_translation)
+
+        return final_coords, final_rotation, final_translation, errors
+
+    def _find_closest_points(self, source, target, target_symbols):
+        """
+        Find the closest points in the target for each point in the source, considering atomic symbols.
+
+        Parameters:
+        - source (np.ndarray): Source coordinates of shape (N, 3).
+        - target (np.ndarray): Target coordinates of shape (M, 3).
+        - target_symbols (np.ndarray): Array of atomic symbols in the target molecule.
+
+        Returns:
+        - closest (np.ndarray): Closest target coordinates for each source point.
+        """
+        closest = np.zeros_like(source)
+        used_target_indices = set()
+
+        for i, (symbol, coord) in enumerate(zip(self.symbols, source)):
+            # Find all target indices with the same symbol
+            possible_indices = np.where(target_symbols == symbol)[0]
+
+            # Exclude already matched target indices
+            available_indices = [idx for idx in possible_indices if idx not in used_target_indices]
+
+            if not available_indices:
+                raise ValueError(f"No available target atoms for symbol '{symbol}'.")
+
+            # Compute distances to available target atoms
+            distances = np.linalg.norm(target[available_indices] - coord, axis=1)
+
+            # Find the closest available target atom
+            min_idx = np.argmin(distances)
+            closest_target_idx = available_indices[min_idx]
+            closest[i] = target[closest_target_idx]
+            used_target_indices.add(closest_target_idx)
+
+        return closest
+
+    def _compute_optimal_transform(self, source, target):
+        """
+        Compute the optimal rotation and translation to align source to target.
+
+        Parameters:
+        - source (np.ndarray): Source coordinates of shape (N, 3).
+        - target (np.ndarray): Target coordinates of shape (N, 3).
+
+        Returns:
+        - R (np.ndarray): Optimal rotation matrix.
+        - t (np.ndarray): Optimal translation vector.
+        """
+        # Compute centroids
+        centroid_source = np.mean(source, axis=0)
+        centroid_target = np.mean(target, axis=0)
+
+        # Center the points
+        source_centered = source - centroid_source
+        target_centered = target - centroid_target
+
+        # Compute covariance matrix
+        H = source_centered.T @ target_centered
+
+        # Singular Value Decomposition
+        U, S, Vt = np.linalg.svd(H)
+        R = Vt.T @ U.T
+
+        # Handle reflection
+        if np.linalg.det(R) < 0:
+            Vt[-1, :] *= -1
+            R = Vt.T @ U.T
+
+        # Compute translation
+        t = centroid_target - R @ centroid_source
+
+        return R, t
+

@@ -1,8 +1,8 @@
 import numpy as np
-from geometry import GeometryMixin
-from reorder import ReorderMixin
-from bonding import Bonding
-from atomic_masses import atomic_masses
+from src.geometry import GeometryMixin
+from src.reorder import ReorderMixin
+from src.bonding import Bonding
+from src.atomic_masses import atomic_masses
 
 class Molecule(GeometryMixin, ReorderMixin):
     def __init__(self, symbols, coordinates, energy=None, frequencies=None, gas_phase=None):
@@ -146,6 +146,25 @@ class Molecule(GeometryMixin, ReorderMixin):
                 symbols.append(symbol)
                 coordinates.append([x, y, z])
         return cls(symbols, coordinates, energy, frequencies, gas_phase)
+
+    def to_xyz(self, comment="Molecule"):
+        """
+        Convert the Molecule instance to an XYZ-formatted string.
+
+        Parameters:
+        - comment (str, optional): Comment or title for the XYZ file. Default is "Molecule".
+
+        Returns:
+        - xyz_str (str): The XYZ-formatted string representing the molecule.
+        """
+        num_atoms = len(self.symbols)
+        xyz_lines = [f"{num_atoms}", comment]
+        for symbol, coord in zip(self.symbols, self.coordinates):
+            # Ensure coordinates are formatted to three decimal places
+            line = f"{symbol}    {coord[0]:.3f}    {coord[1]:.3f}    {coord[2]:.3f}"
+            xyz_lines.append(line)
+        xyz_str = "\n".join(xyz_lines)
+        return xyz_str
 
     def compare_energy_and_moments(self, other, precision=1.0):
         """

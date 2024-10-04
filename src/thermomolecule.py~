@@ -119,29 +119,9 @@ class ThermoMolecule(Molecule):
         else:
             # Non-linear molecule: three moments of inertia
             I1, I2, I3 = moments * const.physical_constants['atomic mass constant'][0] * 1e-20  # kg·m²
-            #sigma_factor = np.sqrt(np.pi ** 0.5 / sigma)
-            #theta_rot = (const.hbar ** 2 / (2 * const.k)) ** 1.5
-            #q_rot = sigma_factor * temperature ** 1.5 / np.sqrt(I1 * I2 * I3) * theta_rot
-
             q_rot = np.pi ** 0.5 / sigma * (8* np.pi**2 * const.k * temperature / const.h / const.h)**(3/2) * (I1*I2*I3)**(1/2)
 
-            ###
-            #sigma_factor = np.sqrt(np.pi / sigma)
-            #theta_rot = (const.hbar ** 2 / (2 * const.k)) ** 0.5
-            #q_rot = sigma_factor * temperature ** 0.5 / np.sqrt(I1 * I2 * I3) / theta_rot
-
-            ###
-            theta_A = const.hbar**2 / (2 * I1 * const.k)
-            theta_B = const.hbar**2 / (2 * I2 * const.k)
-            theta_C = const.hbar**2 / (2 * I3 * const.k)
-            Q_r = np.sqrt(np.pi / sigma) * (temperature / (theta_A * theta_B * theta_C))**(1/2)
-            #return (temperature*temperature*temperature * np.prod(moments_of_inertia))**0.5 / sigma * ( pi**0.5 * ((8*pi*pi*k/h/h)**3 *(mc.AMU**3*mc.BOHR2METER**6))**0.5 )
-            print('ref: ', 42.5)
-            print('q_rot: ', q_rot)
-            print('Q_r: ', Q_r)
-            print(const.physical_constants['atomic mass constant'][1])
-        #return Q_r
-        return Q_r
+        return q_rot
 
     def vibrational_partition_function(self, temperature):
         """
