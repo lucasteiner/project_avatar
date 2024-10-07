@@ -1,7 +1,5 @@
-# thermomolecule.py
-
 import numpy as np
-from molecule import Molecule  # Assuming Molecule class is saved in molecule.py
+#from src.molecule import Molecule  # Assuming Molecule class is saved in molecule.py
 import scipy.constants as const
 
 class ThermoMolecule(Molecule):
