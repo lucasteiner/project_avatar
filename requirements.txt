@@ -2,6 +2,7 @@
 numpy
 scipy
 networkx
+pyyaml
 
 # Sphinx and related documentation tools
 sphinx
