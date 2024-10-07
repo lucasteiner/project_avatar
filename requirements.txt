@@ -1,0 +1,14 @@
+# Core dependencies for your project
+numpy
+scipy
+networkx
+
+# Sphinx and related documentation tools
+sphinx
+sphinx-rtd-theme  # Read the Docs theme
+sphinx-autodoc-typehints  # For better type hint support in autodoc
+sphinxcontrib-napoleon  # For Google-style and NumPy-style docstrings
+
+# Optional, but useful for better documentation output
+sphinx-autodoc-annotation
+
