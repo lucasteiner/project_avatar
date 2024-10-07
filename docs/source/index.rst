@@ -10,8 +10,7 @@ Welcome to Project Avatar's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   molecule.py
-   thermomolecule.py
+   modules
 
 
 Indices and tables
@@ -22,4 +21,7 @@ Indices and tables
 * :ref:`search`
 
 
+
+Project Avatar Modules
+======================
 
