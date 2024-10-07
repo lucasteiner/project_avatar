@@ -2,7 +2,7 @@ import numpy as np
 from src.geometry import GeometryMixin
 from src.reorder import ReorderMixin
 from src.bonding import Bonding
-from src.atomic_masses import atomic_masses
+from src.config import atomic_masses
 
 class Molecule(GeometryMixin, ReorderMixin):
     def __init__(self, symbols, coordinates, energy=None, frequencies=None, gas_phase=None):

@@ -21,7 +21,7 @@ Project Avatar Modules
    :members:
    :undoc-members:
    :show-inheritance:
-.. automodule:: src.atomic_masses
+.. automodule:: src.config
    :members:
    :undoc-members:
    :show-inheritance:

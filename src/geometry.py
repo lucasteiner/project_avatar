@@ -1,6 +1,6 @@
 import numpy as np
 import networkx as nx
-from src.atomic_masses import atomic_masses
+from src.config import atomic_masses
 
 class GeometryMixin:
 
