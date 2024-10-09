@@ -1,7 +1,8 @@
 import pytest
-from thermomolecule import ThermoMolecule
 import numpy as np
 import scipy.constants as const
+
+from src.molecule import Molecule
 
 # Physical constants
 TOLERANCE = 0.1  # Tolerance for comparing floating-point numbers
@@ -31,8 +32,8 @@ def test_water_molecule_properties():
     expected_enthalpy = 63.74 - expected_zpe # kJ/mol
     expected_entropy = 0.19514  # J/mol·K
 
-    # Create ThermoMolecule instance
-    water = ThermoMolecule(
+    # Create Molecule instance
+    water = Molecule(
         symbols=symbols,
         coordinates=coordinates,
         frequencies=frequencies,
@@ -40,11 +41,11 @@ def test_water_molecule_properties():
     )
 
     # Calculate zero-point energy
-    zpe = water.zero_point_energy()
+    zpe = water.mechanics.zero_point_energy()
     assert abs(zpe - expected_zpe) < 0.5, f"ZPE: Expected {expected_zpe}, got {zpe}"
 
     # Calculate thermodynamic properties
-    thermo_props = water.thermodynamic_properties(temperature)
+    thermo_props = water.mechanics.thermodynamic_properties(temperature)
 
     # Compare internal energy
     internal_energy = thermo_props['Internal energy']
@@ -84,8 +85,8 @@ def test_vibrational_entropy_water():
     # Expected vibrational entropy in cal/K/mol
     expected_entropy_vib_cal_per_mol = 0.010  # cal/K/mol
 
-    # Create ThermoMolecule instance
-    water = ThermoMolecule(
+    # Create Molecule instance
+    water = Molecule(
         symbols=symbols,
         coordinates=coordinates,
         frequencies=frequencies,
@@ -93,7 +94,7 @@ def test_vibrational_entropy_water():
     )
 
     # Calculate vibrational entropy (in J/K per molecule)
-    entropy_vib_per_molecule_J_per_K = water.entropy_vibrational(temperature)
+    entropy_vib_per_molecule_J_per_K = water.mechanics.entropy_vibrational(temperature)
 
     # Convert to J/K/mol
     entropy_vib_J_per_K_per_mol = entropy_vib_per_molecule_J_per_K * const.N_A
@@ -126,8 +127,8 @@ def test_rotational_entropy_water():
     # Expected rotational entropy in cal/K/mol
     expected_entropy_rot_cal_per_mol = 10.434  # cal/K/mol
 
-    # Create ThermoMolecule instance
-    water = ThermoMolecule(
+    # Create Molecule instance
+    water = Molecule(
         symbols=symbols,
         coordinates=coordinates,
         frequencies=frequencies,
@@ -135,7 +136,7 @@ def test_rotational_entropy_water():
     )
 
     # Calculate rotational entropy (in J/K per molecule)
-    entropy_rot_per_molecule_J_per_K = water.entropy_rotational(temperature)
+    entropy_rot_per_molecule_J_per_K = water.mechanics.entropy_rotational(temperature)
 
     # Convert to J/K/mol
     entropy_rot_J_per_K_per_mol = entropy_rot_per_molecule_J_per_K * const.N_A
@@ -168,8 +169,8 @@ def test_translational_entropy_water():
     # Expected translational entropy in cal/K/mol
     expected_entropy_trans_cal_per_mol = 34.593  # cal/K/mol
 
-    # Create ThermoMolecule instance
-    water = ThermoMolecule(
+    # Create Molecule instance
+    water = Molecule(
         symbols=symbols,
         coordinates=coordinates,
         frequencies=frequencies,
@@ -177,7 +178,7 @@ def test_translational_entropy_water():
     )
 
     # Calculate translational entropy (in J/K per molecule)
-    entropy_trans_per_molecule_J_per_K = water.entropy_translational(temperature)
+    entropy_trans_per_molecule_J_per_K = water.mechanics.entropy_translational(temperature)
 
     # Convert to J/K/mol
     entropy_trans_J_per_K_per_mol = entropy_trans_per_molecule_J_per_K * const.N_A
@@ -191,6 +192,33 @@ def test_translational_entropy_water():
     # Assert
     assert abs(entropy_trans_cal_per_mol - expected_entropy_trans_cal_per_mol) < tolerance, \
         f"Translational Entropy: Expected {expected_entropy_trans_cal_per_mol} cal/K/mol, got {entropy_trans_cal_per_mol:.3f} cal/K/mol"
+
+def test_is_linear():
+    """
+    Test the is_linear method.
+    """
+    # Linear molecule: CO2
+    symbols_linear = ['O', 'C', 'O']
+    coordinates_linear = [
+        [-1.16, 0.0, 0.0],  # O
+        [0.0, 0.0, 0.0],    # C
+        [1.16, 0.0, 0.0]    # O
+    ]
+    frequencies = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 1000.0, 1000.16, 2000.0, 3000.0])
+
+    molecule_linear = Molecule(symbols_linear, coordinates_linear, frequencies=frequencies)
+    assert molecule_linear.mechanics.is_linear(), "CO2 should be linear"
+
+    # Non-linear molecule: H2O
+    symbols_nonlinear = ['O', 'H', 'H']
+    coordinates_nonlinear = [
+        [0.0000000, -0.0177249, 0.0000000],  # O
+        [0.7586762, 0.5948624, 0.0000000],   # H
+        [-0.7586762, 0.5948624, 0.0000000]   # H
+    ]
+    frequencies = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1000.16, 2000.0, 3000.0])
+    molecule_nonlinear = Molecule(symbols_nonlinear, coordinates_nonlinear, frequencies=frequencies)
+    assert not molecule_nonlinear.mechanics.is_linear(), "H2O should not be linear"
 
 
 if __name__ == "__main__":

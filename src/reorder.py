@@ -92,7 +92,7 @@ class ReorderMixin:
 
     def kabsch_align(self, other):
         """
-        Perform the Kabsch algorithm to align this molecule to another molecule.
+        Perform the Kabsch algorithm to create new coordinates of this molecule aligned after another molecule.
     
         Parameters:
         other (Molecule): The molecule to align to.
@@ -130,7 +130,7 @@ class ReorderMixin:
 
     def hungarian_reorder(self, other):
         """
-        Reorder the atoms in the molecule using the Hungarian algorithm to match another molecule.
+        Create a reordered set of atoms using the Hungarian algorithm to match another molecule.
         The cost matrix is based on the Euclidean distances between atomic coordinates.
     
         Parameters:
@@ -157,7 +157,7 @@ class ReorderMixin:
 
     def reorder_by_centroid(self):
         """
-        Reorders atoms in the molecule by their distance from the centroid.
+        Reorders atoms of the molecule by their distance from the centroid.
     
         Returns:
         tuple: A tuple containing the reordered symbols, reordered coordinates, and the original indices.
@@ -180,7 +180,7 @@ class ReorderMixin:
 
     def reorder_atoms(self, new_order):
         """
-        Reorder the symbols and coordinates in the molecule.
+        Reorder the symbols and coordinates of the molecule.
 
         Parameters:
         new_order (nd.array): New order obtained from sorting routines
@@ -221,19 +221,19 @@ class ReorderMixin:
         """
         return (rotation @ self.coordinates.T).T + translation
     
-    def apply_transformation(self, rotation, translation):
-        """
-        Apply rotation and translation to the molecule's coordinates.
+    #def apply_transformation(self, rotation, translation):
+    #    """
+    #    Apply rotation and translation to the molecule's coordinates.
 
-        Parameters:
-        - rotation (np.ndarray): 3x3 rotation matrix.
-        - translation (np.ndarray): Translation vector of shape (3,).
-        """
-        self.coordinates = (rotation @ self.coordinates.T).T + translation
+    #    Parameters:
+    #    - rotation (np.ndarray): 3x3 rotation matrix.
+    #    - translation (np.ndarray): Translation vector of shape (3,).
+    #    """
+    #    self.coordinates = (rotation @ self.coordinates.T).T + translation
 
     def icp(self, reference, max_iterations=100, tolerance=1e-5):
         """
-        Perform the Iterative Closest Point algorithm to align this molecule to the reference molecule.
+        Perform the Iterative Closest Point algorithm to create aligned coordinates of this molecule to the reference molecule.
 
         Parameters:
         - reference (Molecule): The reference molecule to align to.
@@ -361,7 +361,7 @@ class ReorderMixin:
 
     def reorder_after(self, reference_molecule):
         """
-        Reorder this molecule after another molecule by following these steps:
+        Create reordered atoms of this molecule by following these steps:
         1. Create copies of both molecules.
         2. Reorder by centroid for both the molecule and the reference molecule.
         3. Align using the Kabsch algorithm.

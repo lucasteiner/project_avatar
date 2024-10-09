@@ -2,23 +2,61 @@ import numpy as np
 from src.geometry import GeometryMixin
 from src.reorder import ReorderMixin
 from src.bonding import Bonding
+from src.mechanics import Mechanics
 from src.config import atomic_masses
 
 class Molecule(GeometryMixin, ReorderMixin):
-    def __init__(self, symbols, coordinates, energy=None, frequencies=None, gas_phase=None):
+    def __init__(self, symbols, coordinates, energy=None, frequencies=None, symmetry_number=1):
         """
         Initialize a Molecule object.
         """
         self.symbols = np.array(symbols)
         self.coordinates = np.array(coordinates, dtype=float)
         self.energy = energy
-        self.frequencies = np.array(frequencies) if frequencies is not None else None
-        self.gas_phase = gas_phase
         self.bonding = Bonding(self.symbols, self.coordinates)
+        self.symmetry_number = symmetry_number
+        self._frequencies = np.array(frequencies) if frequencies is not None else None
+        self.update_mechanics()
 
         # Validate that the number of symbols matches the number of coordinate sets
         if len(self.symbols) != len(self.coordinates):
             raise ValueError("The number of symbols and coordinate sets must be the same.")
+
+    @property
+    def frequencies(self):
+        """Get the vibrational frequencies of the molecule."""
+        return self._frequencies
+
+    @frequencies.setter
+    def frequencies(self, value):
+        """Set the vibrational frequencies of the molecule with validation."""
+        if not isinstance(value, (list, np.ndarray)):
+            raise ValueError("Frequencies must be a list or numpy array of numerical values.")
+
+        # Ensure all elements in the list or array are numerical values
+        if not all(isinstance(freq, (int, float)) for freq in value):
+            raise ValueError("All frequencies must be numerical values (integers or floats).")
+
+        # Optionally, convert the list to a numpy array for consistent handling
+        self._frequencies = np.array(value)
+
+        # Reinitialize the composite class whenever frequencies are set
+        self.update_mechanics()
+
+    def update_mechanics(self):
+        """
+        Reinitializes the statistical mechanics composite class.
+        """
+        if self.frequencies is None:
+            self.mechanics = None
+        else:
+            self.mechanics = Mechanics(
+                    self.frequencies,
+                    self.symbols,
+                    self.moments_of_inertia(),
+                    self.molecular_mass(),
+                    self.symmetry_number,
+                    )
 
     def molecular_mass(self):
         """
@@ -111,7 +149,7 @@ class Molecule(GeometryMixin, ReorderMixin):
         return None
 
     @classmethod
-    def from_xyz(cls, filename, energy=None, frequencies=None, gas_phase=None):
+    def from_xyz(cls, filename, energy=None, frequencies=None):
         """
         Create a Molecule instance from an XYZ-format file.
 
@@ -119,7 +157,6 @@ class Molecule(GeometryMixin, ReorderMixin):
         filename (str): Path to the XYZ file.
         energy (float, optional): Energy of the molecule.
         frequencies (list, optional): Vibrational frequencies.
-        gas_phase (bool, optional): Indicates if the molecule is in the gas phase.
 
         Returns:
         Molecule: An instance of the Molecule class.
@@ -145,7 +182,7 @@ class Molecule(GeometryMixin, ReorderMixin):
                 x, y, z = map(float, parts[1:4])
                 symbols.append(symbol)
                 coordinates.append([x, y, z])
-        return cls(symbols, coordinates, energy, frequencies, gas_phase)
+        return cls(symbols, coordinates, energy, frequencies)
 
     def to_xyz(self, comment="Molecule"):
         """
@@ -237,7 +274,7 @@ class Molecule(GeometryMixin, ReorderMixin):
             coordinates=np.copy(self.coordinates),
             energy=self.energy,
             frequencies = np.copy(self.frequencies) if self.frequencies is not None else None,
-            gas_phase=self.gas_phase,
         )
+
 
 

@@ -80,30 +80,6 @@ def test_moments_of_inertia_water():
     assert np.allclose(moments_sorted, expected_moments_sorted, atol=1e-6), \
         f"Moments of inertia do not match expected values:\nCalculated: {moments_sorted}\nExpected: {expected_moments_sorted}"
 
-def test_is_linear():
-    """
-    Test the is_linear method.
-    """
-    # Linear molecule: CO2
-    symbols_linear = ['O', 'C', 'O']
-    coordinates_linear = [
-        [-1.16, 0.0, 0.0],  # O
-        [0.0, 0.0, 0.0],    # C
-        [1.16, 0.0, 0.0]    # O
-    ]
-    molecule_linear = Molecule(symbols_linear, coordinates_linear)
-    assert molecule_linear.is_linear(), "CO2 should be linear"
-
-    # Non-linear molecule: H2O
-    symbols_nonlinear = ['O', 'H', 'H']
-    coordinates_nonlinear = [
-        [0.0000000, -0.0177249, 0.0000000],  # O
-        [0.7586762, 0.5948624, 0.0000000],   # H
-        [-0.7586762, 0.5948624, 0.0000000]   # H
-    ]
-    molecule_nonlinear = Molecule(symbols_nonlinear, coordinates_nonlinear)
-    assert not molecule_nonlinear.is_linear(), "H2O should not be linear"
-
 def test_recenter():
     """
     Test the recenter method.
@@ -384,9 +360,8 @@ def test_copy_method():
     ])
     energy = -75.0
     frequencies = np.array([1000, 1500, 2000])
-    gas_phase = True
 
-    original_molecule = Molecule(symbols=symbols, coordinates=coordinates, energy=energy, frequencies=frequencies, gas_phase=gas_phase)
+    original_molecule = Molecule(symbols=symbols, coordinates=coordinates, energy=energy, frequencies=frequencies)
 
     # Create a copy of the molecule
     copied_molecule = original_molecule.copy()
@@ -396,21 +371,18 @@ def test_copy_method():
     np.testing.assert_array_equal(copied_molecule.coordinates, original_molecule.coordinates)
     np.testing.assert_array_equal(copied_molecule.frequencies, original_molecule.frequencies)
     assert copied_molecule.energy == original_molecule.energy
-    assert copied_molecule.gas_phase == original_molecule.gas_phase
 
     # Modify the copy and ensure the original molecule is not affected
     copied_molecule.symbols[0] = 'C'
     copied_molecule.coordinates[0] = [2.0, 2.0, 2.0]
     copied_molecule.frequencies[0] = 3000
     copied_molecule.energy = -74.0
-    copied_molecule.gas_phase = False
 
     # Ensure the original molecule remains unchanged
     assert original_molecule.symbols[0] == 'O'
     np.testing.assert_array_equal(original_molecule.coordinates[0], [0.0, 0.0, 0.0])
     assert original_molecule.frequencies[0] == 1000
     assert original_molecule.energy == -75.0
-    assert original_molecule.gas_phase == True
 
 
 if __name__ == "__main__":

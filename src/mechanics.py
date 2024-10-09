@@ -1,35 +1,33 @@
 import numpy as np
-from src.molecule import Molecule  # Assuming Molecule class is saved in molecule.py
+#from src.molecule import Molecule  # Assuming Molecule class is saved in molecule.py
 import scipy.constants as const
+from src.config import config
 
-class ThermoMolecule(Molecule):
+class Mechanics():
     """
     A class to calculate thermodynamic properties of a molecule.
     Inherits from the Molecule class.
     """
 
-    def __init__(self, symbols, coordinates, energy=None, frequencies=None, gas_phase=None, symmetry_number=1):
-        super().__init__(symbols, coordinates, energy, frequencies, gas_phase)
-        self.volume = None  # Initialize volume attribute
-        self.symmetry_number_value = symmetry_number  # Set symmetry number
+    def __init__(self, frequencies, symbols, moments_of_inertia, molecular_mass, symmetry_number):
 
-    def set_volume(self, volume_liters):
-        """
-        Set the volume of the system in liters.
+        self.volume = config['VOLUME'] * 1e-3  # Convert liters to cubic meters (m³)
+        self.temperature = config['TEMPERATURE']
+        self.pressure = config['PRESSURE']
+        self.frequency_scaling = config['FREQUENCY_SCALING'] # to be implemented, config?
+        self.qrrho_cutoff = config['qRRHO_CUTOFF']
+        self.gas_phase = config['GAS_PHASE']
 
-        Parameters:
-        volume_liters (float): Volume in liters.
-        """
-        self.volume = volume_liters * 1e-3  # Convert liters to cubic meters (m³)
+        #self.parent_molecule = parent_molecule
+        #self.natoms = len(parent_molecule.symbols)
+        #self.frequencies = parent_molecule.frequencies
+        #self.is_linear = parent_molecule.is_linear
 
-    def symmetry_number(self):
-        """
-        Return the symmetry number of the molecule.
-
-        Returns:
-        int: The symmetry number.
-        """
-        return self.symmetry_number_value
+        self.natoms = len(symbols)
+        self.symmetry_number = symmetry_number
+        self.moments_of_inertia = moments_of_inertia
+        self.molecular_mass = molecular_mass
+        self.frequencies = frequencies[np.where(frequencies > 0)]
 
     def zero_point_energy(self):
         """
@@ -78,14 +76,13 @@ class ThermoMolecule(Molecule):
         Returns:
         float: The translational partition function.
         """
-        mass_kg = self.molecular_mass() * 1e-3 / const.N_A  # Convert g/mol to kg per molecule
+        mass_kg = self.molecular_mass * 1e-3 / const.N_A  # Convert g/mol to kg per molecule
 
-        if self.volume is not None:
-            volume = self.volume  # Use the set volume in m³
-        else:
+        if self.gas_phase:
             # Ideal gas volume per molecule at standard pressure (1 atm)
-            pressure = 100000 # const.atm  # Atmospheric pressure in Pascals
-            volume = const.k * temperature / pressure  # V = kT/p
+            volume = const.k * temperature / self.pressure  # V = kT/p
+        else:
+            volume = self.volume  # Use the set volume in m³
 
         q_trans = ((2 * np.pi * mass_kg * const.k * temperature) ** 1.5 * volume) / (const.h ** 3)
         return q_trans
@@ -100,13 +97,15 @@ class ThermoMolecule(Molecule):
         Returns:
         float: The rotational partition function.
         """
-        sigma = self.symmetry_number()
+        sigma = self.symmetry_number
+        print(sigma)
 
-        if len(self.symbols) == 1:
+        if self.natoms == 1:
             # Monoatomic gas has no rotational degrees of freedom
             return 1.0
 
-        moments = self.moments_of_inertia()
+        moments = self.moments_of_inertia
+        print(moments)
         moments = moments[moments > 1e-10]  # Exclude zero moments
 
         if self.is_linear():
@@ -213,7 +212,7 @@ class ThermoMolecule(Molecule):
         Returns:
         float: Rotational internal energy in Joules per molecule.
         """
-        if len(self.symbols) == 1:
+        if self.natoms == 1:
             return 0.0  # Atoms have no rotational energy
 
         if self.is_linear():
@@ -248,14 +247,13 @@ class ThermoMolecule(Molecule):
         Returns:
         float: Translational entropy in J/K per molecule.
         """
-        mass_kg = self.molecular_mass() * 1e-3 / const.N_A  # Convert g/mol to kg per molecule
+        mass_kg = self.molecular_mass * 1e-3 / const.N_A  # Convert g/mol to kg per molecule
 
-        if self.volume is not None:
-            volume = self.volume  # Use the set volume in m³
-        else:
+        if self.gas_phase:
             # Ideal gas volume per molecule at standard pressure (1 atm)
-            pressure = 100000 # const.atm  # Atmospheric pressure in Pascals
-            volume = const.k * temperature / pressure  # V = kT/p
+            volume = const.k * temperature / self.pressure  # V = kT/p
+        else:
+            volume = self.volume  # Use the set volume in m³
 
         q_trans = self.translational_partition_function(temperature)
         print('qtrans:', q_trans)
@@ -272,7 +270,7 @@ class ThermoMolecule(Molecule):
         Returns:
         float: Rotational entropy in J/K per molecule.
         """
-        if len(self.symbols) == 1:
+        if self.natoms == 1:
             return 0.0  # Atoms have no rotational entropy
 
         q_rot = self.rotational_partition_function(temperature)
@@ -280,6 +278,7 @@ class ThermoMolecule(Molecule):
             S_rot = const.k * (np.log(q_rot) + 1)
         else:
             S_rot = const.k * (np.log(q_rot) + 1.5)
+            print(q_rot)
         return S_rot
 
     def entropy_vibrational(self, temperature):
@@ -299,4 +298,33 @@ class ThermoMolecule(Molecule):
         S_vib = np.sum((theta_vib / (temperature * (np.exp(theta_vib / temperature) - 1)) - np.log(1 - np.exp(-theta_vib / temperature))) * const.k)
         return S_vib
 
+    def is_linear(self, tolerance=1e-3):
+        """
+        Determine if the molecule is linear within a specified tolerance.
 
+        Parameters:
+        tolerance (float): The threshold below which a moment of inertia is considered zero.
+
+        Returns:
+        bool: True if the molecule is linear, False otherwise.
+        """
+        moments = self.moments_of_inertia
+        # Sort the moments to ensure consistent order
+        moments = np.sort(moments)
+        # For a linear molecule, two moments should be approximately zero
+        zero_moments = moments < tolerance
+        if np.sum(zero_moments) >= 1:
+            return True
+        else:
+            return False
+
+if __name__ == '__main__':
+
+    mechanics = Mechanics(
+            np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3000.1, 3565.12, 4000.2]), 
+            np.array(['H', 'O', 'H']), 
+            np.array([20.3, 30.4, 10.2]),
+            18.0,
+            1,
+            )
+    mechanics.thermodynamic_properties(298.15)

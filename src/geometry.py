@@ -93,23 +93,3 @@ class GeometryMixin:
         com = self.center_of_mass()
         return self.coordinates - com
 
-    def is_linear(self, tolerance=1e-3):
-        """
-        Determine if the molecule is linear within a specified tolerance.
-
-        Parameters:
-        tolerance (float): The threshold below which a moment of inertia is considered zero.
-
-        Returns:
-        bool: True if the molecule is linear, False otherwise.
-        """
-        moments = self.moments_of_inertia()
-        # Sort the moments to ensure consistent order
-        moments = np.sort(moments)
-        # For a linear molecule, two moments should be approximately zero
-        zero_moments = moments < tolerance
-        if np.sum(zero_moments) >= 1:
-            return True
-        else:
-            return False
-
