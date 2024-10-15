@@ -6,7 +6,7 @@ from src.mechanics import Mechanics
 from src.config import atomic_masses
 
 class Molecule(GeometryMixin, ReorderMixin):
-    def __init__(self, symbols, coordinates, energy=None, frequencies=None, symmetry_number=1):
+    def __init__(self, symbols, coordinates, energy=None, frequencies=None, symmetry_number=1, electronic_energy=None, thermal_corrections=None, solvation_enthalpy=None):
         """
         Initialize a Molecule object.
         """
@@ -14,6 +14,11 @@ class Molecule(GeometryMixin, ReorderMixin):
         self.coordinates = np.array(coordinates, dtype=float)
         self.energy = energy
         self.bonding = Bonding(self.symbols, self.coordinates)
+
+        self.electronic_energy = electronic_energy #if electronic_energy is not None else energy
+        self.thermal_corrections = thermal_corrections # Will be overwritten when setting frequencies
+        self.solvation_enthalpy = solvation_enthalpy
+
         self.symmetry_number = symmetry_number
         self._frequencies = np.array(frequencies) if frequencies is not None else None
         self.update_mechanics()
@@ -42,6 +47,7 @@ class Molecule(GeometryMixin, ReorderMixin):
 
         # Reinitialize the composite class whenever frequencies are set
         self.update_mechanics()
+        self.thermal_corrections = self.state_functions['Gibbs free energy'] + self.state_functions['Zero-point energy']
 
     def update_mechanics(self):
         """
@@ -184,7 +190,7 @@ class Molecule(GeometryMixin, ReorderMixin):
                 coordinates.append([x, y, z])
         return cls(symbols, coordinates, energy, frequencies)
 
-    def to_xyz(self, comment="Molecule"):
+    def to_xyz(self, comment=None):
         """
         Convert the Molecule instance to an XYZ-formatted string.
 
@@ -194,6 +200,8 @@ class Molecule(GeometryMixin, ReorderMixin):
         Returns:
         - xyz_str (str): The XYZ-formatted string representing the molecule.
         """
+        if comment is None:
+            comment = self.format_energetic_attributes()
         num_atoms = len(self.symbols)
         xyz_lines = [f"{num_atoms}", comment]
         for symbol, coord in zip(self.symbols, self.coordinates):
@@ -202,6 +210,37 @@ class Molecule(GeometryMixin, ReorderMixin):
             xyz_lines.append(line)
         xyz_str = "\n".join(xyz_lines)
         return xyz_str
+
+    def format_energetic_attributes(self):
+        """
+        Formats and returns a string of energetic attributes with prefixes if set.
+
+        Returns:
+            str: A string containing "E_el=", "G_thr=", and "G_solv=" with their corresponding values,
+            or an empty string if none are set.
+        """
+        result = []
+
+        if self.electronic_energy is not None:
+            result.append(f"E_el={self.electronic_energy}")
+
+        if self.thermal_corrections is not None:
+            result.append(f"G_thr={self.thermal_corrections}")
+
+        if self.solvation_enthalpy is not None:
+            result.append(f"G_solv={self.solvation_enthalpy}")
+
+        return ", ".join(result)
+
+    def sum_energetic_attributes(self):
+        """
+        Sums the energetic attributes, treating None as zero.
+
+        Returns:
+            float: The sum of `electronic_energy`, `thermal_corrections`, and `solvation_enthalpy`,
+            where missing values (None) are treated as zero.
+        """
+        return sum(attr or 0 for attr in [self.electronic_energy, self.thermal_corrections, self.solvation_enthalpy])
 
     def compare_energy_and_moments(self, other, precision=1.0):
         """

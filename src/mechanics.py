@@ -14,20 +14,18 @@ class Mechanics():
         self.volume = config['VOLUME'] * 1e-3  # Convert liters to cubic meters (m³)
         self.temperature = config['TEMPERATURE']
         self.pressure = config['PRESSURE']
-        self.frequency_scaling = config['FREQUENCY_SCALING'] # to be implemented, config?
+        self.frequency_scaling = config['FREQUENCY_SCALING']
         self.qrrho_cutoff = config['qRRHO_CUTOFF']
         self.gas_phase = config['GAS_PHASE']
-
-        #self.parent_molecule = parent_molecule
-        #self.natoms = len(parent_molecule.symbols)
-        #self.frequencies = parent_molecule.frequencies
-        #self.is_linear = parent_molecule.is_linear
 
         self.natoms = len(symbols)
         self.symmetry_number = symmetry_number
         self.moments_of_inertia = moments_of_inertia
         self.molecular_mass = molecular_mass
         self.frequencies = frequencies[np.where(frequencies > 0)]
+
+        self.state_functions = self.thermodynamic_properties(self.temperature)
+
 
     def zero_point_energy(self):
         """

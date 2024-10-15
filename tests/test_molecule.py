@@ -384,6 +384,43 @@ def test_copy_method():
     assert original_molecule.frequencies[0] == 1000
     assert original_molecule.energy == -75.0
 
+@pytest.fixture
+def water_molecule():
+    """Fixture to create a water molecule (H₂O) with arbitrary coordinates."""
+    symbols = ['O', 'H', 'H']
+    coordinates = [
+        [0.0, 0.0, 0.0],   # Oxygen
+        [0.0, 0.96, 0.0],  # Hydrogen 1
+        [0.92, -0.36, 0.0] # Hydrogen 2
+    ]
+    return symbols, coordinates
+
+
+def test_format_energetic_attributes(water_molecule):
+    symbols, coordinates = water_molecule
+
+    # Initialize molecule with energetic attributes
+    molecule = Molecule(symbols=symbols, coordinates=coordinates, electronic_energy=-75.0, thermal_corrections=0.8, solvation_enthalpy=-2.5)
+    expected_output = "E_el=-75.0, G_thr=0.8, G_solv=-2.5"
+    assert molecule.format_energetic_attributes() == expected_output
+
+    # Test with some attributes set to None
+    molecule = Molecule(symbols=symbols, coordinates=coordinates, electronic_energy=-75.0, thermal_corrections=None, solvation_enthalpy=-2.5)
+    expected_output = "E_el=-75.0, G_solv=-2.5"
+    assert molecule.format_energetic_attributes() == expected_output
+
+
+def test_sum_energetic_attributes(water_molecule):
+    symbols, coordinates = water_molecule
+
+    # Initialize molecule with energetic attributes
+    molecule = Molecule(symbols=symbols, coordinates=coordinates, electronic_energy=-75.0, thermal_corrections=0.8, solvation_enthalpy=-2.5)
+    assert molecule.sum_energetic_attributes() == pytest.approx(-76.7)
+
+    # Test with some attributes set to None
+    molecule = Molecule(symbols=symbols, coordinates=coordinates, electronic_energy=-75.0, thermal_corrections=None, solvation_enthalpy=-2.5)
+    assert molecule.sum_energetic_attributes() == pytest.approx(-77.5)
+
 
 if __name__ == "__main__":
     pytest.main()
