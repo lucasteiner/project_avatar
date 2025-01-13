@@ -17,6 +17,7 @@ class Bonding:
         self.coordinates = coordinates
         self.tolerance = tolerance
         self.bonds = []
+        
         self.compute_bond_connectivity()
         
     def compute_bond_connectivity(self):

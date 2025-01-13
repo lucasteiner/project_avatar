@@ -47,7 +47,6 @@ class Molecule(GeometryMixin, ReorderMixin):
 
         # Reinitialize the composite class whenever frequencies are set
         self.update_mechanics()
-        self.thermal_corrections = self.state_functions['Gibbs free energy'] + self.state_functions['Zero-point energy']
 
     def update_mechanics(self):
         """
@@ -63,6 +62,7 @@ class Molecule(GeometryMixin, ReorderMixin):
                     self.molecular_mass(),
                     self.symmetry_number,
                     )
+            #self.mechanics.thermal_corrections = self.state_functions['Gibbs free energy'] + self.state_functions['Zero-point energy']
 
     def molecular_mass(self):
         """

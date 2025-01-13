@@ -197,7 +197,8 @@ class Mechanics():
             'Enthalpy': H,
             'Entropy': S,
             'Internal energy': U,
-            'Zero-point energy': self.zero_point_energy()
+            'Zero-point energy': self.zero_point_energy(),
+            'Thermal corrections': G + self.zero_point_energy()
         }
 
     def internal_energy_rotational(self, temperature):
