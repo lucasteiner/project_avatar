@@ -53,3 +53,4 @@ This project is licensed under the MIT License. See the `LICENSE` file for more 
 ## Contact
 
 For questions, suggestions, or feedback, please reach out via the GitHub repository's [Issues](https://github.com/lucasteiner/project-avatar/issues) page.
+Renamed repository
