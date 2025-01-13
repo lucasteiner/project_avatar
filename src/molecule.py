@@ -190,49 +190,62 @@ class Molecule(GeometryMixin, ReorderMixin):
                 coordinates.append([x, y, z])
         return cls(symbols, coordinates, energy, frequencies)
 
-    def to_xyz(self, comment=None):
+    def to_xyz(self, comment=None, attributes_comment=None):
         """
         Convert the Molecule instance to an XYZ-formatted string.
+        Comment section is filled with energy data, if present.
 
         Parameters:
-        - comment (str, optional): Comment or title for the XYZ file. Default is "Molecule".
+        - comment (str, optional): Comment or title for the XYZ file, 
+            will substitute energetic attributes and attributes_comment.
+        - attributes_comment (str, optional): Comment or title for the XYZ file. 
+            will be appended to energetic attributes.
 
         Returns:
         - xyz_str (str): The XYZ-formatted string representing the molecule.
         """
         if comment is None:
-            comment = self.format_energetic_attributes()
+            comment = self.format_energetic_attributes(additional_string=attributes_comment)
         num_atoms = len(self.symbols)
         xyz_lines = [f"{num_atoms}", comment]
         for symbol, coord in zip(self.symbols, self.coordinates):
             # Ensure coordinates are formatted to three decimal places
-            line = f"{symbol}    {coord[0]:.3f}    {coord[1]:.3f}    {coord[2]:.3f}"
+            #line = f"{symbol} \t{coord[0]:.5f} \t{coord[1]:.5f} \t{coord[2]:.5f}"
+            line = f"{symbol} {coord[0]:>12.5f} {coord[1]:>12.5f} {coord[2]:>12.5f}"
             xyz_lines.append(line)
         xyz_str = "\n".join(xyz_lines)
         return xyz_str
 
-    def format_energetic_attributes(self):
+    def format_energetic_attributes(self, additional_string=""):
         """
-        Formats and returns a string of energetic attributes with prefixes if set.
+        Formats and returns a string of energetic attributes with prefixes if set, and appends an additional string.
+
+        Args:
+            additional_string (str): An optional string to append to the formatted attributes.
 
         Returns:
             str: A string containing "E_el=", "G_thr=", and "G_solv=" with their corresponding values,
-            or an empty string if none are set.
+            followed by the additional string if provided, or an empty string if none are set.
         """
         result = []
 
         if self.electronic_energy is not None:
-            result.append(f"E_el={self.electronic_energy}")
+            result.append(f"E_el={self.electronic_energy:.2f}")
 
         if self.thermal_corrections is not None:
-            result.append(f"G_thr={self.thermal_corrections}")
+            result.append(f"G_thr={self.thermal_corrections:.2f}")
 
         if self.solvation_enthalpy is not None:
-            result.append(f"G_solv={self.solvation_enthalpy}")
+            result.append(f"G_solv={self.solvation_enthalpy:.2f}")
 
-        return ", ".join(result)
+        # Join the attributes and append the additional string if provided
+        formatted_output = ", ".join(result)
+        if additional_string:
+            formatted_output += f", {additional_string}"
 
-    def sum_energetic_attributes(self):
+        return formatted_output
+
+    def g_total(self):
         """
         Sums the energetic attributes, treating None as zero.
 

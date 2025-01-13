@@ -401,25 +401,25 @@ def test_format_energetic_attributes(water_molecule):
 
     # Initialize molecule with energetic attributes
     molecule = Molecule(symbols=symbols, coordinates=coordinates, electronic_energy=-75.0, thermal_corrections=0.8, solvation_enthalpy=-2.5)
-    expected_output = "E_el=-75.0, G_thr=0.8, G_solv=-2.5"
+    expected_output = "E_el=-75.00, G_thr=0.80, G_solv=-2.50"
     assert molecule.format_energetic_attributes() == expected_output
 
     # Test with some attributes set to None
     molecule = Molecule(symbols=symbols, coordinates=coordinates, electronic_energy=-75.0, thermal_corrections=None, solvation_enthalpy=-2.5)
-    expected_output = "E_el=-75.0, G_solv=-2.5"
+    expected_output = "E_el=-75.00, G_solv=-2.50"
     assert molecule.format_energetic_attributes() == expected_output
 
 
-def test_sum_energetic_attributes(water_molecule):
+def test_g_total(water_molecule):
     symbols, coordinates = water_molecule
 
     # Initialize molecule with energetic attributes
     molecule = Molecule(symbols=symbols, coordinates=coordinates, electronic_energy=-75.0, thermal_corrections=0.8, solvation_enthalpy=-2.5)
-    assert molecule.sum_energetic_attributes() == pytest.approx(-76.7)
+    assert molecule.g_total() == pytest.approx(-76.7)
 
     # Test with some attributes set to None
     molecule = Molecule(symbols=symbols, coordinates=coordinates, electronic_energy=-75.0, thermal_corrections=None, solvation_enthalpy=-2.5)
-    assert molecule.sum_energetic_attributes() == pytest.approx(-77.5)
+    assert molecule.g_total() == pytest.approx(-77.5)
 
 
 if __name__ == "__main__":
