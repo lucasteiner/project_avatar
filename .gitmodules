@@ -1,3 +1,0 @@
-[submodule "src/qcdc"]
-	path = src/qcdc
-	url = https://github.com/lucasteiner/qcdc.git
