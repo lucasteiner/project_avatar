@@ -10,7 +10,7 @@ class Molecule(GeometryMixin, ReorderMixin):
         """
         Initialize a Molecule object.
         """
-        self.symbols = np.array(symbols)
+        self.symbols = np.array([symbol.capitalize() for symbol in symbols])
         self.coordinates = np.array(coordinates, dtype=float)
         self.energy = energy
         self.bonding = Bonding(self.symbols, self.coordinates)

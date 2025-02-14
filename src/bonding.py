@@ -18,115 +18,56 @@ class Bonding:
         self.tolerance = tolerance
         self.bonds = []
         
-        self.compute_bond_connectivity()
+    def compute_distance_matrix(self):
+        """
+        Compute the distance matrix for the molecule.
+
+        Returns:
+        np.ndarray: A square matrix where element (i, j) represents the distance between atom i and atom j.
+        """
+        diff = self.coordinates[:, np.newaxis, :] - self.coordinates[np.newaxis, :, :]
+        distance_matrix = np.linalg.norm(diff, axis=-1)
+        return distance_matrix
+    
+    def compute_bond_matrix(self):
+        """
+        Compute the bond matrix based on atomic distances and covalent radii.
+
+        Returns:
+        np.ndarray: A square matrix where element (i, j) is 1 if a bond exists, 0 otherwise.
+        """
+        distance_matrix = self.compute_distance_matrix()
         
-    def compute_bond_connectivity(self):
-        """
-        Compute bond connectivity based on covalent radii and coordinates.
-        """
-        num_atoms = len(self.symbols)
-        radii = np.array([covalent_radii.get(symbol, 0.0) for symbol in self.symbols])
-        coords = self.coordinates
-        for i in range(num_atoms):
-            for j in range(i+1, num_atoms):
-                distance = np.linalg.norm(coords[i] - coords[j])
-                cutoff = (radii[i] + radii[j]) * self.tolerance
-                if distance <= cutoff:
-                    self.bonds.append((i, j))
-                    
-    def get_bonds(self):
-        """
-        Return the list of bonds.
-
-        Returns:
-        list of tuples: Each tuple contains indices of bonded atoms.
-        """
-        return self.bonds
-
-    def to_networkx_graph(self):
-        """
-        Convert the molecule to a NetworkX graph.
-
-        Returns:
-        networkx.Graph: Graph representation of the molecule.
-        """
-        G = nx.Graph()
-        num_atoms = len(self.symbols)
-        for i in range(num_atoms):
-            G.add_node(i, symbol=self.symbols[i])
-        for bond in self.bonds:
-            i, j = bond
-            G.add_edge(i, j)
-        return G
-
-    @staticmethod
-    def get_atom_mapping(mol1, mol2):
-        """
-        Get atom mapping between two molecules.
-
-        Parameters:
-        mol1 (MoleculeBonding): First molecule.
-        mol2 (MoleculeBonding): Second molecule.
-
-        Returns:
-        dict or None: Mapping from mol1 atom indices to mol2 atom indices if isomorphic, else None.
-        """
-        G1 = mol1.to_networkx_graph()
-        G2 = mol2.to_networkx_graph()
-
-        # Include the index in the node_match function
-        def node_match(n1, n2):
-            return n1['symbol'] == n2['symbol']
-
-        GM = nx.isomorphism.GraphMatcher(G1, G2, node_match=node_match)
-        if GM.is_isomorphic():
-            mapping = GM.mapping
-            return mapping
-        else:
-            return None
-
-
-    @staticmethod
-    def reorder_coordinates(mapping, coordinates):
-        """
-        Reorder the coordinates of mol2 to match the atom ordering of mol1.
+        # Get covalent radii for each atom
+        radii = np.array([covalent_radii[symbol] for symbol in self.symbols])
+        
+        # Compute sum of covalent radii for each atom pair
+        bond_thresholds = (radii[:, np.newaxis] + radii[np.newaxis, :]) * self.tolerance
+        
+        # Determine bonding based on distance comparison
+        bond_matrix = (distance_matrix <= bond_thresholds) & (distance_matrix > 0)
+        
+        return bond_matrix.astype(int)  # Convert boolean matrix to integer (1/0)
     
-        Parameters:
-        mapping (dict): Atom mapping from mol1 indices to mol2 indices.
-        coordinates (np.ndarray): Coordinates of mol2.
-    
-        Returns:
-        np.ndarray: Reordered coordinates of mol2 matching mol1's atom ordering.
-
-        Caveate: This function fails for everything which is more complicated than bijections.
+    def get_bonded_atoms(self, atom_index):
         """
-        # Create an array of indices corresponding to mol2's atom indices
-        indices = np.array([mapping[i] for i in sorted(mapping.keys())])
-        # Reorder the coordinates using numpy indexing
-        reordered_coords = coordinates[indices]
-        return reordered_coords
-
-#    @staticmethod
-#    def get_atom_mapping(mol1, mol2):
-#        """
-#        Get atom mapping between two molecules.
-#
-#        Parameters:
-#        mol1 (MoleculeBonding): First molecule.
-#        mol2 (MoleculeBonding): Second molecule.
-#
-#        Returns:
-#        dict or None: Mapping from mol1 atom indices to mol2 atom indices if isomorphic, else None.
-#        """
-#        G1 = mol1.to_networkx_graph()
-#        G2 = mol2.to_networkx_graph()
-#        # Define a node_match function to match atoms by symbol
-#        def node_match(n1, n2):
-#            return n1['symbol'] == n2['symbol']
-#        GM = nx.isomorphism.GraphMatcher(G1, G2, node_match=node_match)
-#        if GM.is_isomorphic():
-#            mapping = GM.mapping  # mapping from G1 nodes to G2 nodes
-#            return mapping
-#        else:
-#            return None
-
+        Get the indices, symbols, and bond lengths of all atoms bonded to a given atom.
+ 
+        Parameters:
+        atom_index (int): Index of the atom.
+ 
+        Returns:
+        list of tuples: Each tuple contains (bonded_atom_index, bonded_atom_symbol, bond_length).
+        """
+        bond_matrix = self.compute_bond_matrix()  # Compute bond matrix
+        distance_matrix = self.compute_distance_matrix()  # Compute distance matrix
+ 
+        # Get indices where bonds exist
+        bonded_indices = np.where(bond_matrix[atom_index] == 1)[0]
+ 
+        # Create a list of tuples (index, symbol, bond length)
+        bonded_atoms = [
+            (i, self.symbols[i], distance_matrix[atom_index, i]) for i in bonded_indices
+        ]
+ 
+        return bonded_atoms

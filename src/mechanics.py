@@ -198,7 +198,7 @@ class Mechanics():
             'Entropy': S,
             'Internal energy': U,
             'Zero-point energy': self.zero_point_energy(),
-            'Thermal corrections': G + self.zero_point_energy()
+            'Thermal corrections': self.zero_point_energy() + G
         }
 
     def internal_energy_rotational(self, temperature):
@@ -255,7 +255,7 @@ class Mechanics():
             volume = self.volume  # Use the set volume in m³
 
         q_trans = self.translational_partition_function(temperature)
-        print('qtrans:', q_trans)
+        # print('qtrans:', q_trans)
         S_trans = const.k * (np.log(q_trans) + 1.5 + 1)
         return S_trans
 
