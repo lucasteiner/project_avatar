@@ -1,3 +1,4 @@
+![Project Avatar Logo](https://github.com/lucasteiner/project_avatar/blob/main/assets/logo.jpeg)
 # Project Avatar
 
 **Quantum Chemical Data Processing Tool**
