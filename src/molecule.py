@@ -4,21 +4,25 @@ from src.reorder import ReorderMixin
 from src.bonding import Bonding
 from src.mechanics import Mechanics
 from src.config import atomic_masses
+from src.config import covalent_radii
 
-class Molecule(GeometryMixin, ReorderMixin):
-    def __init__(self, symbols, coordinates, energy=None, frequencies=None, symmetry_number=1, electronic_energy=None, thermal_corrections=None, solvation_enthalpy=None):
+
+class Molecule(ReorderMixin):
+    def __init__(self, symbols, coordinates, energy=None, frequencies=None, point_group='C1', symmetry_number=1, electronic_energy=None, thermal_corrections=None, solvation_enthalpy=None, dipole=None):
         """
         Initialize a Molecule object.
         """
         self.symbols = np.array([symbol.capitalize() for symbol in symbols])
         self.coordinates = np.array(coordinates, dtype=float)
         self.energy = energy
+        self.dipole = dipole
         self.bonding = Bonding(self.symbols, self.coordinates)
 
         self.electronic_energy = electronic_energy #if electronic_energy is not None else energy
         self.thermal_corrections = thermal_corrections # Will be overwritten when setting frequencies
         self.solvation_enthalpy = solvation_enthalpy
 
+        self.point_group = point_group
         self.symmetry_number = symmetry_number
         self._frequencies = np.array(frequencies) if frequencies is not None else None
         self.update_mechanics()
@@ -109,25 +113,8 @@ class Molecule(GeometryMixin, ReorderMixin):
     
         return moments
 
-    def get_coordinates_by_symbol(self, element_symbol):
-        """
-        Return the coordinates of all atoms where the symbol matches the given element symbol.
-    
-        Parameters:
-        element_symbol (str): The element symbol to search for (e.g., 'H', 'O', 'C').
-    
-        Returns:
-        list of np.ndarray: A list of coordinates (np.array) for atoms matching the given symbol.
-        """
-        # Ensure the element symbol is properly formatted (e.g., 'C', 'O', etc.)
-        element_symbol = element_symbol.capitalize()
-    
-        # Gather all coordinates where the atomic symbol matches the given element symbol
-        matching_coords = [
-            coord for symbol, coord in zip(self.symbols, self.coordinates) if symbol == element_symbol
-        ]
 
-        return matching_coords
+
 
     @staticmethod
     def extract_energy(comment_line):
@@ -328,5 +315,41 @@ class Molecule(GeometryMixin, ReorderMixin):
             frequencies = np.copy(self.frequencies) if self.frequencies is not None else None,
         )
 
+    def get_cavity_volume(self, num_samples=1000000):
+        """
+        Estimates the cavity volume formed by the van der Waals radii of the atoms 
+        using the Monte Carlo integration method.
 
+        Args:
+            num_samples (int): Number of random points for Monte Carlo sampling.
 
+        Returns:
+            float: Estimated cavity volume in Å³.
+        
+        The method works as follows:
+        1. Each atom is treated as a sphere with its respective van der Waals radius.
+        2. A bounding box is computed to define the sampling space.
+        3. Random points are generated within the bounding box.
+        4. The proportion of points that fall inside any atomic sphere is used to 
+           approximate the cavity volume based on the bounding box volume.
+        """
+        # Extract van der Waals radii for each atom
+        radii = np.array([covalent_radii[sym] for sym in self.symbols])
+
+        # Compute the bounding box for sampling
+        min_bounds = np.min(self.coordinates - radii[:, np.newaxis], axis=0)
+        max_bounds = np.max(self.coordinates + radii[:, np.newaxis], axis=0)
+        box_volume = np.prod(max_bounds - min_bounds)
+
+        # Generate random points within the bounding box
+        random_points = np.random.uniform(min_bounds, max_bounds, (num_samples, 3))
+
+        # Count the number of points inside any van der Waals sphere
+        inside_count = 0
+        for i, center in enumerate(self.coordinates):
+            distances = np.linalg.norm(random_points - center, axis=1)
+            inside_count += np.sum(distances < radii[i])
+
+        # Compute the estimated cavity volume
+        cavity_volume = box_volume * (inside_count / num_samples)
+        return cavity_volume

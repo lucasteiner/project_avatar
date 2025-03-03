@@ -96,14 +96,14 @@ class Mechanics():
         float: The rotational partition function.
         """
         sigma = self.symmetry_number
-        print(sigma)
+        #print(sigma)
 
         if self.natoms == 1:
             # Monoatomic gas has no rotational degrees of freedom
             return 1.0
 
         moments = self.moments_of_inertia
-        print(moments)
+        #print(moments)
         moments = moments[moments > 1e-10]  # Exclude zero moments
 
         if self.is_linear():
