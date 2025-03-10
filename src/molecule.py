@@ -1,5 +1,4 @@
 import numpy as np
-from src.geometry import GeometryMixin
 from src.reorder import ReorderMixin
 from src.bonding import Bonding
 from src.mechanics import Mechanics
@@ -8,10 +7,24 @@ from src.config import covalent_radii
 
 
 class Molecule(ReorderMixin):
-    def __init__(self, symbols, coordinates, energy=None, frequencies=None, point_group='C1', symmetry_number=1, electronic_energy=None, thermal_corrections=None, solvation_enthalpy=None, dipole=None):
+    def __init__(self, 
+                 symbols, 
+                 coordinates, 
+                 energy=None, 
+                 frequencies=None, 
+                 point_group='C1', 
+                 symmetry_number=1, 
+                 electronic_energy=None, 
+                 thermal_corrections=None, 
+                 solvation_enthalpy=None, 
+                 dipole=None, 
+                 volume_correction=None,
+                 qRRHO_correction=None
+                 ):
         """
         Initialize a Molecule object.
         """
+        self.natoms = len(symbols)
         self.symbols = np.array([symbol.capitalize() for symbol in symbols])
         self.coordinates = np.array(coordinates, dtype=float)
         self.energy = energy
@@ -24,49 +37,22 @@ class Molecule(ReorderMixin):
 
         self.point_group = point_group
         self.symmetry_number = symmetry_number
-        self._frequencies = np.array(frequencies) if frequencies is not None else None
-        self.update_mechanics()
+        self.frequencies = np.array(frequencies) if frequencies is not None else None
 
-        # Validate that the number of symbols matches the number of coordinate sets
-        if len(self.symbols) != len(self.coordinates):
-            raise ValueError("The number of symbols and coordinate sets must be the same.")
-
-    @property
-    def frequencies(self):
-        """Get the vibrational frequencies of the molecule."""
-        return self._frequencies
-
-    @frequencies.setter
-    def frequencies(self, value):
-        """Set the vibrational frequencies of the molecule with validation."""
-        if not isinstance(value, (list, np.ndarray)):
-            raise ValueError("Frequencies must be a list or numpy array of numerical values.")
-
-        # Ensure all elements in the list or array are numerical values
-        if not all(isinstance(freq, (int, float)) for freq in value):
-            raise ValueError("All frequencies must be numerical values (integers or floats).")
-
-        # Optionally, convert the list to a numpy array for consistent handling
-        self._frequencies = np.array(value)
-
-        # Reinitialize the composite class whenever frequencies are set
-        self.update_mechanics()
-
-    def update_mechanics(self):
-        """
-        Reinitializes the statistical mechanics composite class.
-        """
-        if self.frequencies is None:
-            self.mechanics = None
-        else:
+        if frequencies is not None or self.natoms == 1:
             self.mechanics = Mechanics(
                     self.frequencies,
                     self.symbols,
                     self.moments_of_inertia(),
                     self.molecular_mass(),
                     self.symmetry_number,
+                    volume_correction=volume_correction,
+                    qRRHO_correction=qRRHO_correction,
                     )
-            #self.mechanics.thermal_corrections = self.state_functions['Gibbs free energy'] + self.state_functions['Zero-point energy']
+
+        # Validate that the number of symbols matches the number of coordinate sets
+        if len(self.symbols) != len(self.coordinates):
+            raise ValueError("The number of symbols and coordinate sets must be the same.")
 
     def molecular_mass(self):
         """
@@ -113,8 +99,12 @@ class Molecule(ReorderMixin):
     
         return moments
 
-
-
+    def recenter(self):
+        """
+        Returns centered molecules coordinates so that its center of mass is at the origin.
+        """
+        com = self.center_of_mass()
+        return self.coordinates - com
 
     @staticmethod
     def extract_energy(comment_line):

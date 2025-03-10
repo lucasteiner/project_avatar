@@ -9,22 +9,113 @@ class Mechanics():
     Inherits from the Molecule class.
     """
 
-    def __init__(self, frequencies, symbols, moments_of_inertia, molecular_mass, symmetry_number):
+    def __init__(self, frequencies, symbols, moments_of_inertia, molecular_mass, symmetry_number, volume_correction=None, qRRHO_correction=None, electronic_energy=None, solvation_enthalpy=None):
 
-        self.volume = config['VOLUME'] * 1e-3  # Convert liters to cubic meters (m³)
+        self.symbols = symbols
         self.temperature = config['TEMPERATURE']
         self.pressure = config['PRESSURE']
         self.frequency_scaling = config['FREQUENCY_SCALING']
-        self.qrrho_cutoff = config['qRRHO_CUTOFF']
-        self.gas_phase = config['GAS_PHASE']
 
         self.natoms = len(symbols)
         self.symmetry_number = symmetry_number
         self.moments_of_inertia = moments_of_inertia
         self.molecular_mass = molecular_mass
-        self.frequencies = frequencies[np.where(frequencies > 0)]
+        self.moles = 1
 
-        self.state_functions = self.thermodynamic_properties(self.temperature)
+        self.electronic_energy = electronic_energy
+        self.volume_correction = volume_correction
+        self.qRRHO_correction = qRRHO_correction
+        self.solvation_enthalpy = solvation_enthalpy
+        if self.volume_correction and self.solvation_enthalpy:
+            raise ValueError("Don't use volume correction (volume_correction=None), if solvation enthalpy is calculated separately (e.g. with COSMO-RS)")
+
+        # Correcting translational partition function for liquid phase concentration assuming 1 L instead of ideal gas volume of 22.4 L
+        if self.volume_correction:
+            self.volume = config['VOLUME'] * 1e-3  # Convert default of 1 liters to 0.001 cubic meters (m³)
+            print('VOLUME = ',self.volume)
+        else:
+            self.volume = self.moles * const.R * self.temperature / self.pressure  # V = kT/p
+            #print('VOLUME = ',self.volume)
+
+        if frequencies is None and not self.natoms == 1:
+            raise ValueError("Vibrational frequencies are required")
+
+        # Set vibrational thermodynamic functions
+        if self.natoms == 1:
+            self.frequencies = None
+            self.zpe = 0
+            self.q_vib = 1
+            self.U_vib = 0
+        else:
+            self.frequencies = frequencies[np.where(frequencies > 0)]
+            self.zpe = 0.5 * np.sum(const.h * self.frequencies * const.c * 100) * const.N_A / 1000
+            theta_vib = (const.h * self.frequencies * const.c * 100) / const.k
+            self.U_vib = np.sum((theta_vib / (np.exp(theta_vib / self.temperature) - 1)) * const.k) * const.N_A / 1000
+
+
+        # Set rotational thermodynamic functions
+        if self.natoms == 1:
+            self.q_rot = 1
+            self.U_rot = 0
+        elif self.is_linear():
+            #self.q_rot = const.R / const.kilo * self.temperature / self.moments_of_inertia / self.symmetry_number
+            self.U_rot = self.moles * const.R * self.temperature / const.kilo
+        else:
+            self.U_rot = 1.5*self.moles * const.R * self.temperature / const.kilo
+
+        # Translational thermodynamic functions are independent of dimension of molecule 
+        self.U_trans = 1.5 * self.moles * const.R * self.temperature / const.kilo
+
+        # Calculate partition functions
+        self.q_elec = 1
+        self.q_rot = self.rotational_partition_function()
+        self.q_vib = self.vibrational_partition_function()
+        self.q_trans = self.translational_partition_function()
+        
+        # Set electronic thermodynamic functions
+        self.U_elec = 0
+
+        self.q = self.q_trans * self.q_vib * self.q_rot * self.q_elec
+        self.U = self.zpe + self.U_trans + self.U_vib + self.U_rot + self.U_elec
+        self.H = self.U + self.moles * const.R * self.temperature / const.kilo
+        self.S = (self.U - self.zpe) / self.temperature + const.R / const.kilo * np.log(self.q) + const.R / const.kilo
+        self.G = self.zpe - self.temperature * np.log(self.q) * const.R / const.kilo
+
+        # qRRHO correction
+        self.qrrho_cutoff = config['qRRHO_CUTOFF']
+        if qRRHO_correction is None:
+            self.qRRHO_config = config['qRRHO']
+        elif qRRHO_correction:
+            self.qRRHO_config = True
+        else:
+            self.qRRHO_config = False
+
+        if self.qRRHO_config and self.frequencies is not None:
+            self.qRRHO = self.qRRHO_correcture(self.frequencies)
+        else:
+            self.qRRHO = 0
+        print('qRRHO:', self.qRRHO)
+
+        self.G_total = self.total_gibbs_free_energy()
+
+
+        #print('U:', self.U, self.U_trans, self.U_vib, self.U_rot, self.U_elec)
+        #print('q:', self.q, self.q_trans, self.q_vib, self.q_rot, self.q_elec)
+        #print('S:', self.S)
+        #print('R:', const.R)
+        #print('S dirty:', (self.H - self.G) / self.temperature)
+        #print('kilo:', const.kilo)
+        #print('temperature:', self.temperature)
+        #print('MOI:', self.moments_of_inertia)
+    def total_gibbs_free_energy(self):
+        tmp = self.G
+        if self.electronic_energy:
+            tmp += self.electronic_energy
+        if self.qRRHO:
+            tmp -= self.qRRHO
+        if self.solvation_enthalpy:
+            tmp += self.qRRHO
+        return tmp
 
 
     def zero_point_energy(self):
@@ -36,35 +127,14 @@ class Mechanics():
         """
         if self.frequencies is None:
             raise ValueError("Vibrational frequencies are required to calculate zero-point energy.")
-
+    
         # Convert frequencies from wavenumbers (cm^-1) to Joules
         freq_in_hz = self.frequencies * const.c * 100  # Convert cm^-1 to Hz
         zpe = 0.5 * np.sum(const.h * freq_in_hz)
         zpe_per_mol = zpe * const.N_A / 1000  # Convert to kJ/mol
         return zpe_per_mol
 
-    def calculate_partition_functions(self, temperature):
-        """
-        Calculate the translational, rotational, vibrational, and electronic partition functions.
-
-        Parameters:
-        temperature (float): Temperature in Kelvin.
-
-        Returns:
-        dict: A dictionary containing partition functions.
-        """
-        q_trans = self.translational_partition_function(temperature)
-        q_rot = self.rotational_partition_function(temperature)
-        q_vib = self.vibrational_partition_function(temperature)
-        q_elec = self.electronic_partition_function(temperature)
-        return {
-            'translational': q_trans,
-            'rotational': q_rot,
-            'vibrational': q_vib,
-            'electronic': q_elec
-        }
-
-    def translational_partition_function(self, temperature):
+    def translational_partition_function(self, temperature=None):
         """
         Calculate the translational partition function.
 
@@ -74,18 +144,17 @@ class Mechanics():
         Returns:
         float: The translational partition function.
         """
-        mass_kg = self.molecular_mass * 1e-3 / const.N_A  # Convert g/mol to kg per molecule
+        if not temperature:
+            temperature = self.temperature
+        mass_kg = self.molecular_mass / const.kilo / const.N_A  # Convert g/mol to kg per molecule
 
-        if self.gas_phase:
-            # Ideal gas volume per molecule at standard pressure (1 atm)
-            volume = const.k * temperature / self.pressure  # V = kT/p
-        else:
-            volume = self.volume  # Use the set volume in m³
+        q_trans = ((2 * np.pi * mass_kg * const.k * temperature) ** 1.5 * self.volume) / (const.h ** 3 * const.N_A * self.moles)
+        print('V(t_partit):', self.volume)
 
-        q_trans = ((2 * np.pi * mass_kg * const.k * temperature) ** 1.5 * volume) / (const.h ** 3)
+        #return (mass_kg*temperature*2*np.pi*const.k/const.h/const.h)**1.5 * volume /n_part/N_A
         return q_trans
 
-    def rotational_partition_function(self, temperature):
+    def rotational_partition_function(self, temperature=None):
         """
         Calculate the rotational partition function.
 
@@ -95,6 +164,8 @@ class Mechanics():
         Returns:
         float: The rotational partition function.
         """
+        if not temperature:
+            temperature = self.temperature
         sigma = self.symmetry_number
         #print(sigma)
 
@@ -118,7 +189,7 @@ class Mechanics():
 
         return q_rot
 
-    def vibrational_partition_function(self, temperature):
+    def vibrational_partition_function(self, temperature=None):
         """
         Calculate the vibrational partition function.
 
@@ -128,6 +199,8 @@ class Mechanics():
         Returns:
         float: The vibrational partition function.
         """
+        if not temperature:
+            temperature = self.temperature
         if self.frequencies is None:
             return 1.0  # No vibrational modes
 
@@ -136,166 +209,122 @@ class Mechanics():
         return q_vib
         # q_vib is tested :)
 
-    def electronic_partition_function(self, temperature):
+    #def internal_energy_rotational(self, temperature=None):
+    #    """
+    #    Calculate the rotational contribution to internal energy.
+
+    #    Parameters:
+    #    temperature (float): Temperature in Kelvin.
+
+    #    Returns:
+    #    float: Rotational internal energy in Joules per molecule.
+    #    """
+
+    #    if not temperature:
+    #        temperature = self.temperature
+    #    if self.natoms == 1:
+    #        return 0.0  # Atoms have no rotational energy
+
+    #    if self.is_linear():
+    #        return const.k * temperature
+    #    else:
+    #        return const.k * temperature * 1.5
+
+    #def internal_energy_vibrational(self, temperature=None):
+    #    """
+    #    Calculate the vibrational contribution to internal energy.
+
+    #    Parameters:
+    #    temperature (float): Temperature in Kelvin.
+
+    #    Returns:
+    #    float: Vibrational internal energy in Joules per molecule.
+    #    """
+    #    if not temperature:
+    #        temperature = self.temperature
+    #    if self.frequencies is None:
+    #        return 0.0
+
+    #    theta_vib = (const.h * self.frequencies * const.c * 100) / const.k  # Vibrational temperatures
+    #    U_vib = np.sum((theta_vib / (np.exp(theta_vib / temperature) - 1)) * const.k)
+    #    return U_vib
+
+    #def entropy_translational(self, temperature=None):
+    #    """
+    #    Calculate the translational contribution to entropy.
+
+    #    Parameters:
+    #    temperature (float): Temperature in Kelvin.
+
+    #    Returns:
+    #    float: Translational entropy in J/K per molecule.
+    #    """
+    #    if not temperature:
+    #        temperature = self.temperature
+    #    q_trans = self.translational_partition_function(temperature)
+    #    # print('qtrans:', q_trans)
+    #    S_trans = const.k * (np.log(q_trans) + 1.5 + 1)
+    #    return S_trans
+
+    #def entropy_rotational(self, temperature=None):
+    #    """
+    #    Calculate the rotational contribution to entropy.
+
+    #    Parameters:
+    #    temperature (float): Temperature in Kelvin.
+
+    #    Returns:
+    #    float: Rotational entropy in J/K per molecule.
+    #    """
+    #    if not temperature:
+    #        temperature = self.temperature
+    #    if self.natoms == 1:
+    #        return 0.0  # Atoms have no rotational entropy
+
+    #    q_rot = self.rotational_partition_function(temperature)
+    #    if self.is_linear():
+    #        S_rot = const.k * (np.log(q_rot) + 1)
+    #    else:
+    #        S_rot = const.k * (np.log(q_rot) + 1.5)
+    #        print(q_rot)
+    #    return S_rot
+
+    #def entropy_vibrational(self, temperature=None):
+    #    """
+    #    Calculate the vibrational contribution to entropy.
+
+    #    Parameters:
+    #    temperature (float): Temperature in Kelvin.
+
+    #    Returns:
+    #    float: Vibrational entropy in J/K per molecule.
+    #    """
+    #    if not temperature:
+    #        temperature = self.temperature
+    #    if self.frequencies is None:
+    #        return 0.0
+
+    #    theta_vib = (const.h * self.frequencies * const.c * 100) / const.k  # Vibrational temperatures
+    #    S_vib = np.sum((theta_vib / (temperature * (np.exp(theta_vib / temperature) - 1)) - np.log(1 - np.exp(-theta_vib / temperature))) * const.k)
+    #    return S_vib
+
+    def qRRHO_correcture (self, freq_cm, temperature=None):
         """
-        Calculate the electronic partition function.
-
-        Parameters:
-        temperature (float): Temperature in Kelvin.
-
-        Returns:
-        float: The electronic partition function.
+        takes np array with positive vibrational frequencies in wavenumbers
+        Return value corrects the Gibbs free enthalpy.
         """
-        # For simplicity, assume ground state degeneracy is 1
-        return 1.0
-
-    def thermodynamic_properties(self, temperature):
-        """
-        Calculate thermodynamic properties at a given temperature.
-
-        Parameters:
-        temperature (float): Temperature in Kelvin.
-
-        Returns:
-        dict: A dictionary containing Gibbs free energy, enthalpy, entropy, internal energy, and zero-point energy.
-        """
-        q = self.calculate_partition_functions(temperature)
-        beta = 1 / (const.k * temperature)
-
-        # Internal Energy U
-        U_trans = 1.5 * const.k * temperature
-        U_rot = self.internal_energy_rotational(temperature)
-        U_vib = self.internal_energy_vibrational(temperature)
-        U_elec = 0  # Assuming ground state
-        U = U_trans + U_rot + U_vib + U_elec
-
-        # Enthalpy H = U + pV (for ideal gas, pV = nRT, and n=1 here)
-        #H = U + const.k * temperature  # H = U + RT per molecule
-        H = U + const.k * temperature  # H = U + RT per molecule
-
-        # Entropy S
-        S_trans = self.entropy_translational(temperature)
-        S_rot = self.entropy_rotational(temperature)
-        S_vib = self.entropy_vibrational(temperature)
-        S_elec = 0  # Assuming ground state
-        S = S_trans + S_rot + S_vib + S_elec
-
-        # Gibbs Free Energy G = H - T*S
-        G = H - temperature * S
-        # chem.pot.=ZPE-RT*ln(qtrans*qrot*qvib)
-        #G = - const.k *temperature*np.log(q['translational'] * q['rotational'] * q['vibrational'])
-
-        # Convert energies to kJ/mol
-        factor = const.N_A / 1000  # To convert J per molecule to kJ/mol
-        U *= factor
-        H *= factor
-        G *= factor
-        S *= factor  # Entropy in kJ/mol·K
-
-        return {
-            'Gibbs free energy': G,
-            'Enthalpy': H,
-            'Entropy': S,
-            'Internal energy': U,
-            'Zero-point energy': self.zero_point_energy(),
-            'Thermal corrections': self.zero_point_energy() + G
-        }
-
-    def internal_energy_rotational(self, temperature):
-        """
-        Calculate the rotational contribution to internal energy.
-
-        Parameters:
-        temperature (float): Temperature in Kelvin.
-
-        Returns:
-        float: Rotational internal energy in Joules per molecule.
-        """
-        if self.natoms == 1:
-            return 0.0  # Atoms have no rotational energy
-
-        if self.is_linear():
-            return const.k * temperature
-        else:
-            return const.k * temperature * 1.5
-
-    def internal_energy_vibrational(self, temperature):
-        """
-        Calculate the vibrational contribution to internal energy.
-
-        Parameters:
-        temperature (float): Temperature in Kelvin.
-
-        Returns:
-        float: Vibrational internal energy in Joules per molecule.
-        """
-        if self.frequencies is None:
-            return 0.0
-
-        theta_vib = (const.h * self.frequencies * const.c * 100) / const.k  # Vibrational temperatures
-        U_vib = np.sum((theta_vib / (np.exp(theta_vib / temperature) - 1)) * const.k)
-        return U_vib
-
-    def entropy_translational(self, temperature):
-        """
-        Calculate the translational contribution to entropy.
-
-        Parameters:
-        temperature (float): Temperature in Kelvin.
-
-        Returns:
-        float: Translational entropy in J/K per molecule.
-        """
-        mass_kg = self.molecular_mass * 1e-3 / const.N_A  # Convert g/mol to kg per molecule
-
-        if self.gas_phase:
-            # Ideal gas volume per molecule at standard pressure (1 atm)
-            volume = const.k * temperature / self.pressure  # V = kT/p
-        else:
-            volume = self.volume  # Use the set volume in m³
-
-        q_trans = self.translational_partition_function(temperature)
-        # print('qtrans:', q_trans)
-        S_trans = const.k * (np.log(q_trans) + 1.5 + 1)
-        return S_trans
-
-    def entropy_rotational(self, temperature):
-        """
-        Calculate the rotational contribution to entropy.
-
-        Parameters:
-        temperature (float): Temperature in Kelvin.
-
-        Returns:
-        float: Rotational entropy in J/K per molecule.
-        """
-        if self.natoms == 1:
-            return 0.0  # Atoms have no rotational entropy
-
-        q_rot = self.rotational_partition_function(temperature)
-        if self.is_linear():
-            S_rot = const.k * (np.log(q_rot) + 1)
-        else:
-            S_rot = const.k * (np.log(q_rot) + 1.5)
-            print(q_rot)
-        return S_rot
-
-    def entropy_vibrational(self, temperature):
-        """
-        Calculate the vibrational contribution to entropy.
-
-        Parameters:
-        temperature (float): Temperature in Kelvin.
-
-        Returns:
-        float: Vibrational entropy in J/K per molecule.
-        """
-        if self.frequencies is None:
-            return 0.0
-
-        theta_vib = (const.h * self.frequencies * const.c * 100) / const.k  # Vibrational temperatures
-        S_vib = np.sum((theta_vib / (temperature * (np.exp(theta_vib / temperature) - 1)) - np.log(1 - np.exp(-theta_vib / temperature))) * const.k)
-        return S_vib
+        if not temperature:
+            temperature = self.temperature
+        Bav = 1e-44 #kg*m^2
+        freq_s = freq_cm*100.0*const.c #1/s
+        xx = freq_s*const.h/const.k/temperature #no unit
+        #print('xx=',xx)
+        Sv = xx * (1.0 / (np.exp(xx)-1.0))  -  np.log(1.0 - np.exp(-xx)) #no unit
+        mue = const.h/(8.0 * np.pi**2.0 * freq_s) #J*s^2 = kgm^2
+        Sr = (1 + np.log(8.0 *np.pi*np.pi*np.pi *mue*Bav / (mue + Bav) *const.k*temperature /const.h/const.h) ) / 2 #no unit
+        w_damp = 1.0 / (1.0 + (1e2/freq_cm)**4) #m^4
+        S_final = w_damp*const.R*Sv + ( (1.0-w_damp) *const.R*(1 + np.log(8.0*np.pi*np.pi*np.pi*mue*Bav /(mue + Bav) *const.k*temperature/const.h/const.h) ) /2) #m^4*J/mol/K
+        return np.sum((S_final - const.R*Sv )/const.kilo)*temperature #m^4*kJ/mol
 
     def is_linear(self, tolerance=1e-3):
         """
@@ -307,15 +336,7 @@ class Mechanics():
         Returns:
         bool: True if the molecule is linear, False otherwise.
         """
-        moments = self.moments_of_inertia
-        # Sort the moments to ensure consistent order
-        moments = np.sort(moments)
-        # For a linear molecule, two moments should be approximately zero
-        zero_moments = moments < tolerance
-        if np.sum(zero_moments) >= 1:
-            return True
-        else:
-            return False
+        return np.sum(self.moments_of_inertia < tolerance) == 1
 
 if __name__ == '__main__':
 
@@ -326,4 +347,3 @@ if __name__ == '__main__':
             18.0,
             1,
             )
-    mechanics.thermodynamic_properties(298.15)

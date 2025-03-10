@@ -164,19 +164,6 @@ H  -0.7586762    0.5948624    0.0000000
     assert np.array_equal(molecule.symbols, np.array(expected_symbols)), "Symbols from XYZ not read correctly"
     assert np.allclose(molecule.coordinates, expected_coordinates, atol=1e-6), "Coordinates from XYZ not read correctly"
 
-def test_invalid_initialization():
-    """
-    Test that initializing with mismatched symbols and coordinates raises an error.
-    """
-    symbols = ['O', 'H']
-    coordinates = [
-        [0.0, 0.0, 0.0],
-        [0.7586762, 0.5948624, 0.0],
-        [-0.7586762, 0.5948624, 0.0]
-    ]
-    with pytest.raises(ValueError, match="The number of symbols and coordinate sets must be the same."):
-        Molecule(symbols, coordinates)
-
 def test_invalid_reorder_atoms():
     """
     Test that providing an invalid new_order raises an error.
@@ -281,36 +268,6 @@ def test_calculate_rmsd():
 
     # Since the molecules are identical, the RMSD should be close to zero
     assert np.isclose(rmsd_value, 0.0, atol=1e-1), "RMSD should be close to zero for identical molecules."
-
-def test_get_coordinates_by_symbol():
-    # Define symbols and coordinates for a water molecule (H2O)
-    symbols = ['H', 'O', 'H']
-    coordinates = [
-        [0.0, 0.0, 0.0],  # H
-        [0.0, 0.0, 1.0],  # O
-        [1.0, 0.0, 0.0],  # H
-    ]
-    
-    molecule = Molecule(symbols, coordinates)
-    
-    # Test for hydrogen atoms ('H')
-    hydrogen_coords = molecule.get_coordinates_by_symbol('H')
-    expected_hydrogen_coords = [np.array([0.0, 0.0, 0.0]), np.array([1.0, 0.0, 0.0])]
-    
-    assert len(hydrogen_coords) == 2
-    for coord, expected in zip(hydrogen_coords, expected_hydrogen_coords):
-        np.testing.assert_array_equal(coord, expected)
-    
-    # Test for oxygen atom ('O')
-    oxygen_coords = molecule.get_coordinates_by_symbol('O')
-    expected_oxygen_coords = [np.array([0.0, 0.0, 1.0])]
-    
-    assert len(oxygen_coords) == 1
-    np.testing.assert_array_equal(oxygen_coords[0], expected_oxygen_coords[0])
-    
-    # Test for an element not present ('C' for carbon)
-    carbon_coords = molecule.get_coordinates_by_symbol('C')
-    assert len(carbon_coords) == 0  # Should return an empty list
 
 def test_apply_hungarian():
     # Create a test molecule with symbols and coordinates

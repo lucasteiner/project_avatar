@@ -1,7 +1,7 @@
 TEMPERATURE : 298.15 #K
-#PRESSURE : 101325   #Pa
-PRESSURE : 100000   #Pa
+PRESSURE : 101325   #Pa
+#PRESSURE : 100000   #Pa
 VOLUME : 1.0 #liters
+qRRHO : True #cm-1, to be implemented
 qRRHO_CUTOFF : 100 #cm-1, to be implemented
 FREQUENCY_SCALING : 1.0
-GAS_PHASE : True
