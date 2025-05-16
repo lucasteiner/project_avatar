@@ -32,10 +32,8 @@ class Mechanics():
         # Correcting translational partition function for liquid phase concentration assuming 1 L instead of ideal gas volume of 22.4 L
         if self.volume_correction:
             self.volume = config['VOLUME'] * 1e-3  # Convert default of 1 liters to 0.001 cubic meters (m³)
-            print('VOLUME = ',self.volume)
         else:
             self.volume = self.moles * const.R * self.temperature / self.pressure  # V = kT/p
-            #print('VOLUME = ',self.volume)
 
         if frequencies is None and not self.natoms == 1:
             raise ValueError("Vibrational frequencies are required")
@@ -94,7 +92,6 @@ class Mechanics():
             self.qRRHO = self.qRRHO_correcture(self.frequencies)
         else:
             self.qRRHO = 0
-        print('qRRHO:', self.qRRHO)
 
         self.G_total = self.total_gibbs_free_energy()
 
@@ -149,7 +146,6 @@ class Mechanics():
         mass_kg = self.molecular_mass / const.kilo / const.N_A  # Convert g/mol to kg per molecule
 
         q_trans = ((2 * np.pi * mass_kg * const.k * temperature) ** 1.5 * self.volume) / (const.h ** 3 * const.N_A * self.moles)
-        print('V(t_partit):', self.volume)
 
         #return (mass_kg*temperature*2*np.pi*const.k/const.h/const.h)**1.5 * volume /n_part/N_A
         return q_trans
