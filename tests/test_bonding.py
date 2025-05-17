@@ -1,3 +1,5 @@
+import numpy as np
+
 def test_find_rings(paf2):
     # Create a bond matrix for a 5-membered ring: atoms 0-1-2-3-4-0
     rings = paf2.bonding.find_rings()
@@ -11,3 +13,8 @@ def test_find_rings(paf2):
     
     assert expected_rings == rings
     assert len(rings) == 8  # Should be only one ring
+
+def test_ring_center(paf2):
+    ring0 = paf2.bonding.find_rings()[0]
+    center = paf2.bonding.get_ring_center(ring0)
+    assert np.allclose(center, np.asarray([1.207545, 4.19927442, -1.40707352]))

@@ -20,6 +20,7 @@ class Bonding:
         self.bonds = []
         self.distance_matrix = self.compute_distance_matrix()
         self.bond_matrix = self.compute_bond_matrix()
+        self.rings = self.find_rings()
 
     def distance(self, atom_index1, atom_index2):
         """
@@ -420,3 +421,14 @@ class Bonding:
         rings = nx.cycle_basis(G)
         return rings
 
+    def get_ring_center(self, indices):
+        """Returns the geometric center of a ring defined by atom indices.
+
+        Args:
+            indices (list[int]): List of atom indices forming a ring.
+
+        Returns:
+            np.ndarray: 3D coordinates of the ring center.
+        """
+        ring_coords = self.coordinates[indices]
+        return np.mean(ring_coords, axis=0)
