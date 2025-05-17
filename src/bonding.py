@@ -404,3 +404,19 @@ class Bonding:
             if counts['O'] == 1 and counts['C'] == 4 and counts['H'] == 8 and check_hydrogens:
                 fragments.append(thf_indices)
         return fragments
+
+    def find_rings(self):
+        """Returns all rings (simple cycles) as lists of atom indices using networkx."""
+        G = nx.Graph()
+
+        # Add edges from bond_matrix
+        num_atoms = self.bond_matrix.shape[0]
+        for i in range(num_atoms):
+            for j in range(i + 1, num_atoms):
+                if self.bond_matrix[i, j] == 1:
+                    G.add_edge(i, j)
+
+        # Use networkx to find cycles
+        rings = nx.cycle_basis(G)
+        return rings
+
