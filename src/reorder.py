@@ -367,6 +367,7 @@ class ReorderMixin:
         3. Align using the Kabsch algorithm.
         4. Reorder by the Hungarian algorithm.
         5. Align again using the Kabsch algorithm.
+        6. Align again using the ICP algorithm.
     
         Parameters:
         reference_molecule (Molecule): The reference molecule to reorder after.
@@ -434,5 +435,16 @@ class ReorderMixin:
         final_coordinates = source_copy.coordinates
         #return source_copy.coordinates, combined_order
         return final_coordinates, final_symbols, combined_order
+    
+    def is_duplicate(self, other):
+        """Compares two molecules and returns true if they are duplicates, False otherwise
 
+        Parameters:
+            other (molecule): Molecule for comparison
 
+        Returns:
+        bool: True, if molecules are duplicates
+        """
+        coord, symbols, _ = self.reorder_after(other)
+        reference = Molecule(symbols, coord, energy=other.energy) # reorder to get isomers and align coordinates, too
+        return np.all(self.compare_molecule(self, reference))

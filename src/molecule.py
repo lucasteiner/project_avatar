@@ -75,8 +75,13 @@ class Molecule(ReorderMixin):
 
     def moments_of_inertia(self):
         """
-        Calculate and return the principal moments of inertia of the molecule.
+        Calculate and return the principal moments of inertia of the molecule in amu*A^2.
         """
+        # Dirty units:
+        # atomic_masses : atomic mass units (amu)
+        # coordinates : A
+        # moi : amu*A^2? this should be changed, but take care of reorder mixin which has certain thresholds 
+        # and the mechanics module, which converts them to kg*m^2 by itself
         masses = np.array([atomic_masses[symbol] for symbol in self.symbols])
         coords = self.coordinates - self.center_of_mass()  # Centering around the center of mass
     
