@@ -368,6 +368,7 @@ class ReorderMixin:
         4. Reorder by the Hungarian algorithm.
         5. Align again using the Kabsch algorithm.
         6. Align again using the ICP algorithm.
+        7. Combine the sorting orders
     
         Parameters:
         reference_molecule (Molecule): The reference molecule to reorder after.
@@ -405,21 +406,13 @@ class ReorderMixin:
         # Step 5: Perform another Kabsch alignment
         final_aligned_coords, _ = source_copy.kabsch_align(reference_copy)
 
-        # Step 5: Perform an ICP alignment
+        # Step 6: Perform an ICP alignment
         final_aligned_coords, _, _, error = source_copy.icp(reference_copy)
-        #final_aligned_coords, _, _, error = reference_copy.icp(source_copy)
-        #print(error)
-        #print('asdf', source_copy.calculate_rmsd(reference_copy))
     
         # Update the final coordinates
         source_copy.coordinates = final_aligned_coords
-        #print(error)
-        #print('asdf', source_copy.calculate_rmsd(reference_copy))
-        #print(source_copy.calculate_rmsd(reference_copy))
-        print(source_copy.calculate_rmsd(reference_copy))
-        #assert False
     
-        # Step 6: Combine the sorting orders
+        # Step 7: Combine the sorting orders
         # First, invert the reference centroid order
         inverted_reference_centroid_order = source_copy.invert_positions(reference_centroid_order)
     
@@ -445,6 +438,10 @@ class ReorderMixin:
         Returns:
         bool: True, if molecules are duplicates
         """
-        coord, symbols, _ = self.reorder_after(other)
-        reference = Molecule(symbols, coord, energy=other.energy) # reorder to get isomers and align coordinates, too
-        return np.all(self.compare_molecule(self, reference))
+        try:
+            coord, symbols, _ = self.reorder_after(other)
+            reference = Molecule(symbols, coord, energy=other.energy) # reorder to get isomers and align coordinates, too
+            bool = np.all(self.compare_molecule(self, reference))
+        except ValueError:
+            bool = False
+        return bool
