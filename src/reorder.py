@@ -18,7 +18,6 @@ class ReorderMixin:
         """
         moments_self = self.moments_of_inertia()
         moments_other = other.moments_of_inertia()
-    
         return np.allclose(moments_self, moments_other, atol=tolerance)
     
     def compare_energy(self, other, tolerance=1.0):
@@ -275,10 +274,10 @@ class ReorderMixin:
 
             # Check for convergence
             if i > 0 and abs(errors[-2] - errors[-1]) < tolerance:
-                print(f"ICP converged after {i+1} iterations.")
+                #print(f"ICP converged after {i+1} iterations.")
                 break
-        else:
-            print(f"ICP did not converge after {max_iterations} iterations.")
+        #else:
+        #    print(f"ICP did not converge after {max_iterations} iterations.")
 
         # Apply the final transformation to the molecule
         final_coords = self.get_transformed_coordinates(final_rotation, final_translation)
@@ -428,20 +427,3 @@ class ReorderMixin:
         final_coordinates = source_copy.coordinates
         #return source_copy.coordinates, combined_order
         return final_coordinates, final_symbols, combined_order
-    
-    def is_duplicate(self, other):
-        """Compares two molecules and returns true if they are duplicates, False otherwise
-
-        Parameters:
-            other (molecule): Molecule for comparison
-
-        Returns:
-        bool: True, if molecules are duplicates
-        """
-        try:
-            coord, symbols, _ = self.reorder_after(other)
-            reference = Molecule(symbols, coord, energy=other.energy) # reorder to get isomers and align coordinates, too
-            bool = np.all(self.compare_molecule(self, reference))
-        except ValueError:
-            bool = False
-        return bool

@@ -348,3 +348,22 @@ class Molecule(ReorderMixin):
         # Compute the estimated cavity volume
         cavity_volume = box_volume * (inside_count / num_samples)
         return cavity_volume
+
+    def is_duplicate(self, other):
+        """Compares two molecules and returns true if they are duplicates, False otherwise
+
+        Parameters:
+            other (molecule): Molecule for comparison
+
+        Returns:
+        bool: True, if molecules are duplicates
+        """
+        coord, symbols, _ = self.reorder_after(other)
+        reference = Molecule(symbols.copy(), coord.copy(), energy=float(other.energy)) # reorder to get isomers and align coordinates, too
+        try:
+            tmp = other.compare_molecule(reference)
+            bool = np.all(tmp)
+        except ValueError:
+            #print('ValueError, handle RMSD calculation better!')
+            bool = False
+        return bool
