@@ -111,7 +111,7 @@ class Mechanics():
         if self.qRRHO:
             tmp -= self.qRRHO
         if self.solvation_enthalpy:
-            tmp += self.qRRHO
+            tmp += self.solvation_enthalpy
         return tmp
 
 

@@ -379,6 +379,35 @@ def test_g_total(water_molecule):
     assert molecule.g_total() == pytest.approx(-77.5)
 
 
+def test_invert_coordinates(paf2):
+    original = paf2
+    inverted = original.with_changes(coordinates=-original.coordinates)
+
+    # Check it's a new object
+    assert inverted is not original
+
+    # Check coordinates are negated
+    assert np.allclose(inverted.coordinates, -original.coordinates)
+
+    # Check all other attributes are preserved
+    for attr in [
+        'symbols', 'energy', 'frequencies',
+        'point_group', 'symmetry_number',
+        'electronic_energy', 'thermal_corrections',
+        'solvation_enthalpy', 'dipole',
+        'volume_correction', 'qRRHO_correction'
+    ]:
+        original_val = getattr(original, attr, None)
+        inverted_val = getattr(inverted, attr, None)
+
+    if isinstance(original_val, np.ndarray):
+        if np.issubdtype(original_val.dtype, np.number):
+            assert np.allclose(inverted_val, original_val)
+        else:
+            assert np.array_equal(inverted_val, original_val)
+    else:
+        assert inverted_val == original_val
+
 if __name__ == "__main__":
     pytest.main()
 

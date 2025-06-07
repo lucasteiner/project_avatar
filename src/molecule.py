@@ -1,4 +1,7 @@
 import numpy as np
+import re
+import inspect
+from dataclasses import fields
 from src.reorder import ReorderMixin
 from src.bonding import Bonding
 from src.mechanics import Mechanics
@@ -7,6 +10,7 @@ from src.config import covalent_radii
 
 
 class Molecule(ReorderMixin):
+
     def __init__(self, 
                  symbols, 
                  coordinates, 
@@ -19,40 +23,56 @@ class Molecule(ReorderMixin):
                  solvation_enthalpy=None, 
                  dipole=None, 
                  volume_correction=None,
-                 qRRHO_correction=None
-                 ):
-        """
-        Initialize a Molecule object.
-        """
+                 qRRHO_correction=None):
+        self._init_geometry(symbols, coordinates)
+        self._init_properties(energy, dipole)
+        self._init_symmetry(point_group, symmetry_number)
+        self._init_energy_data(electronic_energy, thermal_corrections, solvation_enthalpy)
+        self._init_mechanics_if_applicable(frequencies, volume_correction, qRRHO_correction)
+
+    def _init_geometry(self, symbols, coordinates):
         self.natoms = len(symbols)
         self.symbols = np.array([symbol.capitalize() for symbol in symbols])
-        self.coordinates = np.array(coordinates, dtype=float)
-        self.energy = energy
-        self.dipole = dipole
-        self.bonding = Bonding(self.symbols, self.coordinates)
+        self.coordinates = np.asarray(coordinates, dtype=float)
 
-        self.electronic_energy = electronic_energy #if electronic_energy is not None else energy
-        self.thermal_corrections = thermal_corrections # Will be overwritten when setting frequencies
-        self.solvation_enthalpy = solvation_enthalpy
+        if self.coordinates.shape != (self.natoms, 3):
+            raise ValueError("Coordinates must have shape (N_atoms, 3).")
 
-        self.point_group = point_group
-        self.symmetry_number = symmetry_number
-        self.frequencies = np.array(frequencies) if frequencies is not None else None
-
-        if frequencies is not None or self.natoms == 1:
-            self.mechanics = Mechanics(
-                    self.frequencies,
-                    self.symbols,
-                    self.moments_of_inertia(),
-                    self.molecular_mass(),
-                    self.symmetry_number,
-                    volume_correction=volume_correction,
-                    qRRHO_correction=qRRHO_correction,
-                    )
-
-        # Validate that the number of symbols matches the number of coordinate sets
         if len(self.symbols) != len(self.coordinates):
             raise ValueError("The number of symbols and coordinate sets must be the same.")
+
+        self.bonding = Bonding(self.symbols, self.coordinates)
+
+    def _init_properties(self, energy, dipole):
+        self.energy = energy
+        self.dipole = dipole
+
+    def _init_symmetry(self, point_group, symmetry_number):
+        self.point_group = point_group
+        self.symmetry_number = symmetry_number
+
+    def _init_energy_data(self, electronic_energy, thermal_corrections, solvation_enthalpy):
+        self.electronic_energy = electronic_energy
+        self.thermal_corrections = thermal_corrections
+        self.solvation_enthalpy = solvation_enthalpy
+
+    def _init_mechanics_if_applicable(self, frequencies, volume_correction, qRRHO_correction):
+        self.frequencies = np.array(frequencies) if frequencies is not None else None
+        self.volume_correction = volume_correction
+        self.qRRHO_correction = qRRHO_correction
+
+        # Frequencies are necessary to calculate useful statistical mechanics including vibrations,
+        # but if natoms == 1, there are no vibrational frequencies
+        if self.frequencies is not None or self.natoms == 1:
+            self.mechanics = Mechanics(
+                self.frequencies,
+                self.symbols,
+                self.moments_of_inertia(),
+                self.molecular_mass(),
+                self.symmetry_number,
+                volume_correction=self.volume_correction,
+                qRRHO_correction=self.qRRHO_correction,
+            )
 
     def molecular_mass(self):
         """
@@ -310,6 +330,19 @@ class Molecule(ReorderMixin):
             frequencies = np.copy(self.frequencies) if self.frequencies is not None else None,
         )
 
+    def with_changes(self, **kwargs):
+        allowed = {
+            name
+            for name, param in inspect.signature(self.__class__.__init__).parameters.items()
+            if name != 'self'
+        }
+        invalid = set(kwargs) - allowed
+        if invalid:
+            raise ValueError(f"Invalid fields: {', '.join(invalid)}")
+ 
+        args = {key: kwargs.get(key, getattr(self, key)) for key in allowed}
+        return self.__class__(**args)
+
     def get_cavity_volume(self, num_samples=1000000):
         """
         Estimates the cavity volume formed by the van der Waals radii of the atoms 
@@ -356,14 +389,14 @@ class Molecule(ReorderMixin):
             other (molecule): Molecule for comparison
 
         Returns:
-        bool: True, if molecules are duplicates
+        duplicate (bool): True, if molecules are duplicates
         """
         coord, symbols, _ = self.reorder_after(other)
         reference = Molecule(symbols.copy(), coord.copy(), energy=float(other.energy)) # reorder to get isomers and align coordinates, too
         try:
             tmp = other.compare_molecule(reference)
-            bool = np.all(tmp)
+            duplicate = np.all(tmp)
         except ValueError:
             #print('ValueError, handle RMSD calculation better!')
-            bool = False
-        return bool
+            duplicate = False
+        return duplicate
