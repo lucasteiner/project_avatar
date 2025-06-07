@@ -175,7 +175,7 @@ class Bonding:
         return [(i, self.symbols[i], self.distance_matrix[atom_index, i]) for i in bonded_indices]
 
     def get_bound_indices(self, atom_index, element_symbol=None):
-        """_summary_
+        """Function finds all bound atoms and returns them or all atoms corresponding to element_symbol
 
         Args:
             atom_index (_type_): _description_
