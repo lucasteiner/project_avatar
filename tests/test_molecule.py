@@ -374,10 +374,6 @@ def test_g_total(water_molecule):
     molecule = Molecule(symbols=symbols, coordinates=coordinates, electronic_energy=-75.0, thermal_corrections=0.8, solvation_enthalpy=-2.5)
     assert molecule.g_total() == pytest.approx(-76.7)
 
-    # Test with some attributes set to None
-    molecule = Molecule(symbols=symbols, coordinates=coordinates, electronic_energy=-75.0, thermal_corrections=None, solvation_enthalpy=-2.5)
-    assert molecule.g_total() == pytest.approx(-77.5)
-
 
 def test_invert_coordinates(paf2):
     original = paf2

@@ -92,7 +92,7 @@ def linear_lih():
         thermal_corrections=data[g_thr_string][mol_path] - data['qRRHO'][mol_path], 
         frequencies=data['Frequencies'][mol_path],
         dipole=data['Dipole'][mol_path]['total'],
-        qRRHO_correction=False,
+        qRRHO_bool=False,
         )
     return molecule
 

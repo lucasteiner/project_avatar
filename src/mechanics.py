@@ -9,10 +9,15 @@ class Mechanics():
     Inherits from the Molecule class.
     """
 
-    def __init__(self, frequencies, symbols, moments_of_inertia, molecular_mass, symmetry_number, volume_correction=None, qRRHO_correction=None, electronic_energy=None, solvation_enthalpy=None):
+    def __init__(self, frequencies, symbols, moments_of_inertia, molecular_mass, symmetry_number, volume_correction=None, qRRHO_bool=None, electronic_energy=None, solvation_enthalpy=None, temperature=None):
 
         self.symbols = symbols
-        self.temperature = config['TEMPERATURE']
+        if temperature:
+            self.temperature = temperature
+        elif config['TEMPERATURE']:
+            self.temperature = config['TEMPERATURE']
+        else:
+            raise KeyError('Please append "TEMPERATURE : 298.15" in the file config/.config.yaml or set argument temperature')
         self.pressure = config['PRESSURE']
         self.frequency_scaling = config['FREQUENCY_SCALING']
 
@@ -24,7 +29,7 @@ class Mechanics():
 
         self.electronic_energy = electronic_energy
         self.volume_correction = volume_correction
-        self.qRRHO_correction = qRRHO_correction
+        self.qRRHO_bool = qRRHO_bool
         self.solvation_enthalpy = solvation_enthalpy
         if self.volume_correction and self.solvation_enthalpy:
             raise ValueError("Don't use volume correction (volume_correction=None), if solvation enthalpy is calculated separately (e.g. with COSMO-RS)")
@@ -81,9 +86,9 @@ class Mechanics():
 
         # qRRHO correction
         self.qrrho_cutoff = config['qRRHO_CUTOFF']
-        if qRRHO_correction is None:
+        if qRRHO_bool is None:
             self.qRRHO_config = config['qRRHO']
-        elif qRRHO_correction:
+        elif qRRHO_bool:
             self.qRRHO_config = True
         else:
             self.qRRHO_config = False
