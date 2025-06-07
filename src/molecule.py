@@ -1,6 +1,7 @@
 import numpy as np
 import re
 import inspect
+import copy
 from dataclasses import fields
 from src.reorder import ReorderMixin
 from src.bonding import Bonding
@@ -23,12 +24,13 @@ class Molecule(ReorderMixin):
                  solvation_enthalpy=None, 
                  dipole=None, 
                  volume_correction=None,
-                 qRRHO_correction=None):
+                 qRRHO_bool=None,
+                 temperature=None):
         self._init_geometry(symbols, coordinates)
         self._init_properties(energy, dipole)
         self._init_symmetry(point_group, symmetry_number)
         self._init_energy_data(electronic_energy, thermal_corrections, solvation_enthalpy)
-        self._init_mechanics_if_applicable(frequencies, volume_correction, qRRHO_correction)
+        self._init_mechanics_if_applicable(frequencies, volume_correction, qRRHO_bool, temperature)
 
     def _init_geometry(self, symbols, coordinates):
         self.natoms = len(symbols)
@@ -56,10 +58,11 @@ class Molecule(ReorderMixin):
         self.thermal_corrections = thermal_corrections
         self.solvation_enthalpy = solvation_enthalpy
 
-    def _init_mechanics_if_applicable(self, frequencies, volume_correction, qRRHO_correction):
+    def _init_mechanics_if_applicable(self, frequencies, volume_correction, qRRHO_bool, temperature):
+        self.temperature = temperature
         self.frequencies = np.array(frequencies) if frequencies is not None else None
         self.volume_correction = volume_correction
-        self.qRRHO_correction = qRRHO_correction
+        self.qRRHO_bool = qRRHO_bool
 
         # Frequencies are necessary to calculate useful statistical mechanics including vibrations,
         # but if natoms == 1, there are no vibrational frequencies
@@ -71,7 +74,8 @@ class Molecule(ReorderMixin):
                 self.molecular_mass(),
                 self.symmetry_number,
                 volume_correction=self.volume_correction,
-                qRRHO_correction=self.qRRHO_correction,
+                qRRHO_bool=self.qRRHO_bool,
+                temperature=self.temperature
             )
 
     def molecular_mass(self):
@@ -255,6 +259,8 @@ class Molecule(ReorderMixin):
             float: The sum of `electronic_energy`, `thermal_corrections`, and `solvation_enthalpy`,
             where missing values (None) are treated as zero.
         """
+        if self.thermal_corrections is None:
+            raise ValueError('Missing thermal corrections or frequencies')
         return sum(attr or 0 for attr in [self.electronic_energy, self.thermal_corrections, self.solvation_enthalpy])
 
     def compare_energy_and_moments(self, other, precision=1.0):
@@ -316,21 +322,34 @@ class Molecule(ReorderMixin):
             lines.append(f"{symbol} {x:.6f} {y:.6f} {z:.6f}")
         return '\n'.join(lines)
 
-    def copy(self):
+    def copy(self, **kwargs):
         """
-        Create a deep copy of the molecule.
+        Return a deep copy of the object with optional field overrides.
+        All fields are copied using deepcopy to avoid shared references.
+        """
+        allowed = {
+            name
+            for name, param in inspect.signature(self.__class__.__init__).parameters.items()
+            if name != 'self'
+        }
+        invalid = set(kwargs) - allowed
+        if invalid:
+            raise ValueError(f"Invalid fields: {', '.join(invalid)}")
     
-        Returns:
-        Molecule: A new Molecule instance that is a copy of the current molecule.
-        """
-        return Molecule(
-            symbols=np.copy(self.symbols),
-            coordinates=np.copy(self.coordinates),
-            energy=self.energy,
-            frequencies = np.copy(self.frequencies) if self.frequencies is not None else None,
-        )
+        # Deepcopy all current attributes unless explicitly overridden
+        args = {
+            key: kwargs.get(key, copy.deepcopy(getattr(self, key)))
+            for key in allowed
+        }
+        return self.__class__(**args)
 
     def with_changes(self, **kwargs):
+        """
+        Return the object with changes.
+        Actually, a new molecule is initialized for this purpose.
+        However, objects are reference copies.
+        Use "mol.copy()" if you need deep copies.
+        """
         allowed = {
             name
             for name, param in inspect.signature(self.__class__.__init__).parameters.items()
