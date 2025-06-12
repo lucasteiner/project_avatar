@@ -101,14 +101,6 @@ class Mechanics():
         self.G_total = self.total_gibbs_free_energy()
 
 
-        #print('U:', self.U, self.U_trans, self.U_vib, self.U_rot, self.U_elec)
-        #print('q:', self.q, self.q_trans, self.q_vib, self.q_rot, self.q_elec)
-        #print('S:', self.S)
-        #print('R:', const.R)
-        #print('S dirty:', (self.H - self.G) / self.temperature)
-        #print('kilo:', const.kilo)
-        #print('temperature:', self.temperature)
-        #print('MOI:', self.moments_of_inertia)
     def total_gibbs_free_energy(self):
         tmp = self.G
         if self.electronic_energy:
@@ -168,14 +160,12 @@ class Mechanics():
         if not temperature:
             temperature = self.temperature
         sigma = self.symmetry_number
-        #print(sigma)
 
         if self.natoms == 1:
             # Monoatomic gas has no rotational degrees of freedom
             return 1.0
 
         moments = self.moments_of_inertia
-        #print(moments)
         moments = moments[moments > 1e-10]  # Exclude zero moments
 
         if self.is_linear():
@@ -263,7 +253,6 @@ class Mechanics():
     #    if not temperature:
     #        temperature = self.temperature
     #    q_trans = self.translational_partition_function(temperature)
-    #    # print('qtrans:', q_trans)
     #    S_trans = const.k * (np.log(q_trans) + 1.5 + 1)
     #    return S_trans
 
@@ -287,7 +276,6 @@ class Mechanics():
     #        S_rot = const.k * (np.log(q_rot) + 1)
     #    else:
     #        S_rot = const.k * (np.log(q_rot) + 1.5)
-    #        print(q_rot)
     #    return S_rot
 
     #def entropy_vibrational(self, temperature=None):
@@ -319,7 +307,6 @@ class Mechanics():
         Bav = 1e-44 #kg*m^2
         freq_s = freq_cm*100.0*const.c #1/s
         xx = freq_s*const.h/const.k/temperature #no unit
-        #print('xx=',xx)
         Sv = xx * (1.0 / (np.exp(xx)-1.0))  -  np.log(1.0 - np.exp(-xx)) #no unit
         mue = const.h/(8.0 * np.pi**2.0 * freq_s) #J*s^2 = kgm^2
         Sr = (1 + np.log(8.0 *np.pi*np.pi*np.pi *mue*Bav / (mue + Bav) *const.k*temperature /const.h/const.h) ) / 2 #no unit
