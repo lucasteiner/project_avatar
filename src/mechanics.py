@@ -9,7 +9,7 @@ class Mechanics():
     Inherits from the Molecule class.
     """
 
-    def __init__(self, frequencies, symbols, moments_of_inertia, molecular_mass, symmetry_number, volume_correction=None, qRRHO_bool=None, electronic_energy=None, solvation_enthalpy=None, temperature=None):
+    def __init__(self, frequencies, symbols, moments_of_inertia, molecular_mass, symmetry_number, volume_correction=None, qRRHO_bool=None, solvation_enthalpy=None, temperature=None):
 
         self.symbols = symbols
         if temperature:
@@ -27,7 +27,6 @@ class Mechanics():
         self.molecular_mass = molecular_mass
         self.moles = 1
 
-        self.electronic_energy = electronic_energy
         self.volume_correction = volume_correction
         self.qRRHO_bool = qRRHO_bool
         self.solvation_enthalpy = solvation_enthalpy
@@ -82,7 +81,7 @@ class Mechanics():
         self.U = self.zpe + self.U_trans + self.U_vib + self.U_rot + self.U_elec
         self.H = self.U + self.moles * const.R * self.temperature / const.kilo
         self.S = (self.U - self.zpe) / self.temperature + const.R / const.kilo * np.log(self.q) + const.R / const.kilo
-        self.G = self.zpe - self.temperature * np.log(self.q) * const.R / const.kilo
+        self.G_uncorrected = self.zpe - self.temperature * np.log(self.q) * const.R / const.kilo
 
         # qRRHO correction
         self.qrrho_cutoff = config['qRRHO_CUTOFF']
@@ -102,9 +101,7 @@ class Mechanics():
 
 
     def total_gibbs_free_energy(self):
-        tmp = self.G
-        if self.electronic_energy:
-            tmp += self.electronic_energy
+        tmp = self.G_uncorrected
         if self.qRRHO:
             tmp -= self.qRRHO
         if self.solvation_enthalpy:

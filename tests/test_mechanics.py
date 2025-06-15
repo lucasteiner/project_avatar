@@ -18,8 +18,8 @@ def test_mechanics_with_smi2_ace_thf_for_liquids(smi2_ace_thf4_for_liquids):
     Tests if volume correction is applied correctly
     """
     results = []
-    print('G:', smi2_ace_thf4_for_liquids.mechanics.G, smi2_ace_thf4_for_liquids.thermal_corrections)
-    results.append(np.isclose(smi2_ace_thf4_for_liquids.mechanics.G, smi2_ace_thf4_for_liquids.thermal_corrections, atol=0.3))
+    print('G:', smi2_ace_thf4_for_liquids.mechanics.G_uncorrected, smi2_ace_thf4_for_liquids.thermal_corrections)
+    results.append(np.isclose(smi2_ace_thf4_for_liquids.mechanics.G_uncorrected, smi2_ace_thf4_for_liquids.thermal_corrections, atol=0.3))
     assert all(results), f"{results}"
 
 def test_mechanics_with_smi2_ace_thf(smi2_ace_thf4):
@@ -33,8 +33,8 @@ def test_mechanics_with_smi2_ace_thf(smi2_ace_thf4):
     results.append(np.isclose(np.log(smi2_ace_thf4.mechanics.q_vib), 49.24, atol=0.03))
     results.append(np.isclose(np.log(smi2_ace_thf4.mechanics.q_rot), 17.24, atol=0.03))
     results.append(np.isclose(smi2_ace_thf4.mechanics.S, 1.06765, atol=0.0003))
-    results.append(np.isclose(smi2_ace_thf4.mechanics.G, 1259.21, atol=0.3))
-    print('qRRHO2:', smi2_ace_thf4.thermal_corrections - smi2_ace_thf4.mechanics.G)
+    results.append(np.isclose(smi2_ace_thf4.mechanics.G_uncorrected, 1259.21, atol=0.3))
+    print('qRRHO2:', smi2_ace_thf4.thermal_corrections - smi2_ace_thf4.mechanics.G_uncorrected)
     print('G_total(qcdc):', smi2_ace_thf4.thermal_corrections)
     print('G_total:', smi2_ace_thf4.mechanics.G_total)
     results.append(np.isclose(smi2_ace_thf4.mechanics.G_total, smi2_ace_thf4.thermal_corrections, atol=2.3))
@@ -42,7 +42,7 @@ def test_mechanics_with_smi2_ace_thf(smi2_ace_thf4):
     #print('Q_vib:', np.log(smi2_ace_thf4.mechanics.q_vib), 49.24)
     #print('Q_rot:', np.log(smi2_ace_thf4.mechanics.q_rot), 17.24)
     #print('S:', smi2_ace_thf4.mechanics.S, 1.06765)
-    #print('G:', smi2_ace_thf4.mechanics.G, 1259.21)
+    #print('G:', smi2_ace_thf4.mechanics.G_uncorrected, 1259.21)
 
     assert all(results), f"{results}"
 
@@ -57,12 +57,12 @@ def test_mechanics_with_li_atom(li_atom):
     results.append(np.isclose(np.log(li_atom.mechanics.q_vib), 0.0, atol=0.03))
     results.append(np.isclose(np.log(li_atom.mechanics.q_rot), 0.0, atol=0.03))
     results.append(np.isclose(li_atom.mechanics.S, 0.13310, atol=0.0003))
-    results.append(np.isclose(li_atom.mechanics.G, -33.49, atol=0.3))
+    results.append(np.isclose(li_atom.mechanics.G_uncorrected, -33.49, atol=0.3))
     #print('Q_trans:', np.log(li_atom.mechanics.q_trans), 20.53)
     #print('Q_vib:', np.log(li_atom.mechanics.q_vib), 49.24)
     #print('Q_rot:', np.log(li_atom.mechanics.q_rot), 17.24)
     #print('S:', li_atom.mechanics.S, 1.06765)
-    #print('G:', li_atom.mechanics.G, 1259.21)
+    #print('G:', li_atom.mechanics.G_uncorrected, 1259.21)
 
     assert all(results), f"{results}"
 
@@ -77,13 +77,13 @@ def test_mechanics_with_linear_lih(linear_lih):
     results.append(np.isclose(np.log(linear_lih.mechanics.q_vib), 0.00, atol=0.03))
     results.append(np.isclose(np.log(linear_lih.mechanics.q_rot), 3.44, atol=0.03))
     results.append(np.isclose(linear_lih.mechanics.S, 0.17192, atol=0.0003))
-    results.append(np.isclose(linear_lih.mechanics.G, -35.56, atol=0.3))
+    results.append(np.isclose(linear_lih.mechanics.G_uncorrected, -35.56, atol=0.3))
     print(results)
     #print('Q_trans:', np.log(linear_lih.mechanics.q_trans), 20.53)
     #print('Q_vib:', np.log(linear_lih.mechanics.q_vib), 49.24)
     #print('Q_rot:', np.log(linear_lih.mechanics.q_rot), 17.24)
     #print('S:', linear_lih.mechanics.S, 1.06765)
-    #print('G:', linear_lih.mechanics.G, 1259.21)
+    #print('G:', linear_lih.mechanics.G_uncorrected, 1259.21)
 
     assert all(results), f"{results}"
 
